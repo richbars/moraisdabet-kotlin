@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: moraisdabet
+
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+  aws:
+    region: us-east-1
+    sqs:
+      endpoint: http://localhost:4566
+      queue-name:
+        sheets-processing: ${SQS_QUEUE_SHEETS_NAME}
+    credentials:
+      access-key: test
+      secret-key: test
+
+  sheets:
+    id: 16kPjOWhCTujPPcLKcQn0ZoNkXG1evMn_pxmZ5cOfPrk
+    credentials:
+      path: credentials.json
+    worksheet-name: moraisdabet
+    goltrix:
+      sheet-name: Goltrix
+    cornerpro:
+      sheet-name: Produção
+
+
+logging:
+  level:
+    com.richbars.moraisdabet: TRACE
+    org.springframework: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger - %msg%n"
+
+server:
+  port: 80
