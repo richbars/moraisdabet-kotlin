@@ -31,7 +31,7 @@ interface JpaGoltrixRepository : CoroutineCrudRepository<JpaGoltrixEntity, Long>
     @Query("SELECT * FROM goltrix WHERE betfair_id = :betfairId AND alert_name = :alertName")
     suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): JpaGoltrixEntity?
 
-    @Query("SELECT * FROM goltrix WHERE game_status = 'inprogress'")
+    @Query("SELECT * FROM goltrix WHERE game_status != 'finished'")
     suspend fun getMatchsInProgress(): List<JpaGoltrixEntity>
 
     @Query("SELECT * FROM goltrix")

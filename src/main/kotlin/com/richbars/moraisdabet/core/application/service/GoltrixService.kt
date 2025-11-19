@@ -75,12 +75,10 @@ class GoltrixService(
             val alreadyExists =
                 goltrixPort.findByBetfairIdAndAlertName(eventId.toLong(), filter) != null
 
-            if (alreadyExists) {
-                log.debug("Evento já existe no banco: $eventId - $filter")
-                return
-            }
+            if (alreadyExists) return
 
             log.info("Processando Evento: '$eventId', Filtro: '$filter'")
+
 
             // Betfair
             val eventInfo = betfairHttpPort.getEventById(eventId.toLong())
@@ -98,7 +96,7 @@ class GoltrixService(
                 sofascoreId = sofascoreId,
                 marketInfo = marketInfo,
                 alertName = filter,
-                alertEntryMinute = currentMinute,
+                alertEntryMinute = currentMinute ?: 0,
                 alertEntryScore = score,
                 gameStatus = status,
                 gameFinalScore = score
@@ -106,13 +104,9 @@ class GoltrixService(
 
             val saved = goltrixPort.save(goltrixdto)
 
-            log.info(
-                "Salvo: betfairId=${goltrixdto.betfairId} - ${goltrixdto.eventName} " +
-                        "- thread=${Thread.currentThread().name} - time=${System.nanoTime()}"
-            )
-
             if (saved) {
                 goltrixEventSenderPort.send(goltrixdto)
+                log.info("[ProcessEvent] Salvo: betfairId=${goltrixdto.betfairId} - ${goltrixdto.eventName}")
             }
 
         } catch (ex: Exception) {
@@ -125,6 +119,7 @@ class GoltrixService(
     private suspend fun processMatchUpdate(match: GoltrixDto) {
 
         try {
+
             val marketId = match.marketHtId ?: match.marketUnderId
 
             // BetfairService
@@ -144,9 +139,14 @@ class GoltrixService(
                 scoreMatch
             )
 
+            if (!hasDifference(goltrixUpdate, match)) return
+
             val saved = goltrixPort.updateGoltrix(goltrixUpdate)
 
-            if (saved) goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+            if (saved) {
+                goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+                log.info("[ProcessUpdate] Atualizado: betfairId=${match.betfairId} - ${match.eventName} - ${match.alertName} - ${match.gameStatus} - ${match.goltrixStatus}")
+            }
 
         } catch (e: Exception) {
             log.error("Error in update match betfairid: ${match.betfairId} | ${e.message}")
@@ -222,5 +222,15 @@ class GoltrixService(
             gameFinalScore = gameFinalScore
         )
     }
+
+    private fun hasDifference(new: GoltrixUpdate, old: GoltrixDto): Boolean {
+        return new.alertExitMinute != old.alertExitMinute ||
+                new.alertExitScore != old.alertExitScore ||
+                new.gameStatus != old.gameStatus ||
+                new.goltrixStatus != old.goltrixStatus ||
+                new.gameFinalScore != old.gameFinalScore
+    }
+
+
 
 }
