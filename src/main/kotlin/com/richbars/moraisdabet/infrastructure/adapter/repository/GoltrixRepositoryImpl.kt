@@ -57,8 +57,13 @@ class GoltrixRepositoryImpl(
         }
     }
 
-    override fun findAll(): List<GoltrixDto> {
-        TODO()
+    override suspend fun findAll(): List<GoltrixDto> {
+        return try {
+            jpaGoltrixRepository.getAll().map { it.toModel() }
+        } catch (ex: Exception){
+            log.error("Erro ao buscar todos os jogos", ex)
+            emptyList()
+        }
     }
 
     override suspend fun updateGoltrix(goltrix: GoltrixUpdate): Boolean {
@@ -90,6 +95,16 @@ class GoltrixRepositoryImpl(
                 "Erro ao atualizar jogo com betfairId=${goltrix.betfairId} e alertName=${goltrix.alertName}: ${ex.message}"
             )
             false
+        }
+    }
+
+    override suspend fun verifyExit(): List<GoltrixDto> {
+        return try {
+            jpaGoltrixRepository.verifyExit()
+                .map { it.toModel() }
+        } catch (ex: Exception) {
+            log.error("Erro ao verificar saída do jogo", ex)
+            throw ex
         }
     }
 

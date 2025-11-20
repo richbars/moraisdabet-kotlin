@@ -160,7 +160,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
 
     }
 
-    override suspend fun getStatusMarketById(marketId: Double): String =
+    override suspend fun getStatusMarketById(marketId: String): String =
         withContext(Dispatchers.IO) {
 
             val params = mapOf(
@@ -238,8 +238,8 @@ class BetfairHttpAdapter : BetfairHttpPort {
         return if (marketName != null && layPrice != null) {
             Lay(
                 marketName = marketName,
-                marketId = marketId.toDouble(),
-                marketOdd = layPrice.toDouble()
+                marketId = marketId,
+                marketOdd = layPrice.toString()
             )
         } else {
             null
@@ -268,8 +268,8 @@ class BetfairHttpAdapter : BetfairHttpPort {
         return if (marketName != null && backPrice != null) {
             Back(
                 marketName = marketName,
-                marketId = marketId.toDouble(),
-                marketOdd = backPrice.toDouble()
+                marketId = marketId,
+                marketOdd = backPrice.toString()
             )
         } else {
             null

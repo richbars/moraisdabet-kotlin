@@ -2,7 +2,6 @@ package com.richbars.moraisdabet.infrastructure.adapter.messaging.listener
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.richbars.moraisdabet.core.application.dto.GoltrixDto
 import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
 import com.richbars.moraisdabet.core.application.port.SheetsServicePort
@@ -33,7 +32,7 @@ class SheetsEventListenerAdapter(
                 return@runBlocking
             }
 
-            logger.info("Mensagem recebida com operação '$operation' → ${message.body()}")
+            logger.info("[SheetsEventListener] Mensagem recebida com operação '$operation' → ${message.body()}")
 
             when (operation) {
 
@@ -48,12 +47,12 @@ class SheetsEventListenerAdapter(
                 }
 
                 else -> {
-                    logger.warn("Operação desconhecida: $operation")
+                    logger.warn("[SheetsEventListener] Operação desconhecida: $operation")
                 }
             }
 
         } catch (ex: Exception) {
-            logger.error("Erro ao processar mensagem do SQS: ${message.body()}", ex)
+            logger.error("[SheetsEventListener] Erro ao processar mensagem do SQS: ${message.body()}", ex)
         }
     }
 }

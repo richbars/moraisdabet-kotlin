@@ -20,12 +20,12 @@ data class MarketBetfairDto(
 
 data class Lay(
     val marketName: String,
-    val marketId: Double,
-    val marketOdd: Double
+    val marketId: String,
+    val marketOdd: String
 )
 
 data class Back(
     val marketName: String,
-    val marketId: Double,
-    val marketOdd: Double
+    val marketId: String,
+    val marketOdd: String
 )

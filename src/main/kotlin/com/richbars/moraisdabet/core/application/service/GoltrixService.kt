@@ -36,8 +36,8 @@ class GoltrixService(
                 }
             }
         }
-
         jobs.awaitAll()
+        verifyExit(eventIds)
     }
 
     suspend fun update() = supervisorScope {
@@ -132,7 +132,7 @@ class GoltrixService(
             val goltrixUpdate = updateGoltrixDto(
                 match.betfairId,
                 match.alertName,
-                null,
+                match.alertExitMinute,
                 scoreMatch,
                 statusMatch,
                 statusMarket,
@@ -156,9 +156,44 @@ class GoltrixService(
 
 
     suspend fun verifyExit(eventIds: Map<String, MutableList<String>>) {
-        val allMatches = goltrixPort.findAll()
 
+        // Cria a lista de chaves ativas vindas da API
+        val activeKeys = eventIds.flatMap { (eventId, filters) ->
+            filters.map { filter -> "$eventId|$filter" }
+        }.toSet()
+
+        // Busca todos os jogos ativos no banco
+        val allMatches = goltrixPort.verifyExit()
+
+        // Filtra jogos que não aparecem mais no eventIds
+        val deadMatches = allMatches.filter { match ->
+            val key = "${match.betfairId}|${match.alertName}"
+            key !in activeKeys
+        }
+
+        deadMatches.forEach {
+           val currentMinute = sofascoreHttpPort.getCurrentGameMinuteById(it.sofascoreId)
+            val goltrixUpdate = updateGoltrixDto(
+                it.betfairId,
+                it.alertName,
+                currentMinute,
+                it.alertEntryScore,
+                it.gameStatus,
+                it.goltrixStatus ?: "",
+                it.gameFinalScore
+            )
+
+            val saved = goltrixPort.updateGoltrix(goltrixUpdate)
+            println("salvo papai")
+            if (saved) {
+                goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+                log.info("[VerifyExit] Ficou morto: betfair=${it.betfairId} filter=${it.alertName} - alertExit=${currentMinute}")
+            }
+        }
+
+        }
     }
+
 
     fun createGoltrixDto(
         eventInfo: EventBetfairDto,
@@ -230,7 +265,3 @@ class GoltrixService(
                 new.goltrixStatus != old.goltrixStatus ||
                 new.gameFinalScore != old.gameFinalScore
     }
-
-
-
-}

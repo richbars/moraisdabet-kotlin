@@ -14,15 +14,15 @@ data class GoltrixDto(
 
     //Alert Lay
     val alertMarketUnderName: String?,
-    val alertOddUnder: Double?,
+    val alertOddUnder: String?,
 
     //Alert Back
     val alertMarketHtName: String?,
-    val alertOddHt: Double?,
+    val alertOddHt: String?,
 
     //Market Id
-    val marketUnderId: Double?,
-    val marketHtId: Double?,
+    val marketUnderId: String?,
+    val marketHtId: String?,
 
     //Alert Entry
     val alertName: String,
