@@ -1,5 +1,6 @@
 package com.richbars.moraisdabet.core.application.dto
 
+import com.richbars.moraisdabet.core.application.port.MarketBasePort
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -19,13 +20,13 @@ data class MarketBetfairDto(
 )
 
 data class Lay(
-    val marketName: String,
-    val marketId: String,
-    val marketOdd: String
-)
+    override val marketName: String,
+    override val marketId: String,
+    override val marketOdd: String
+) : MarketBasePort
 
 data class Back(
-    val marketName: String,
-    val marketId: String,
-    val marketOdd: String
-)
+    override val marketName: String,
+    override val marketId: String,
+    override val marketOdd: String
+) : MarketBasePort

@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class ScheduledTasks(
-    private val goltrixService: GoltrixService,
+    private val goltrixService: GoltrixService
 ) {
 
     private val log = LoggerFactory.getLogger(GoltrixService::class.java)
@@ -23,10 +23,8 @@ class ScheduledTasks(
     fun runExecuteEvery1m() {
         runBlocking {
             executeMutex.withLock {
-                log.debug("Starting execute process")
                 goltrixService.execute()
                 goltrixService.update()
-                log.debug("Finished execute process")
             }
         }
     }

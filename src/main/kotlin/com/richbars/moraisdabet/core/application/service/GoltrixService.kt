@@ -1,9 +1,6 @@
 package com.richbars.moraisdabet.core.application.service
 
-import com.richbars.moraisdabet.core.application.dto.EventBetfairDto
-import com.richbars.moraisdabet.core.application.dto.GoltrixDto
-import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
-import com.richbars.moraisdabet.core.application.dto.MarketBetfairDto
+import com.richbars.moraisdabet.core.application.dto.*
 import com.richbars.moraisdabet.core.application.port.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -12,6 +9,8 @@ import kotlinx.coroutines.supervisorScope
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Service
 class GoltrixService(
@@ -20,6 +19,7 @@ class GoltrixService(
     private val betfairHttpPort: BetfairHttpPort,
     private val goltrixPort: GoltrixPort,
     private val goltrixEventSenderPort: GoltrixEventSenderPort,
+    private val telegramNotifierPort: TelegramNotifierPort
 ) {
 
     private val failedEvents = ConcurrentHashMap.newKeySet<String>()
@@ -102,10 +102,31 @@ class GoltrixService(
                 gameFinalScore = score
             )
 
+            val selectedMarket: MarketBasePort? =
+                marketInfo?.lay?.takeIf { !it.marketId.isNullOrBlank() }
+                    ?: marketInfo?.back?.takeIf { !it.marketId.isNullOrBlank() }
+
+
+
+            //DTO Goltrix Telegram
+            val telegramGoltrixDto = TelegramGoltrixDto(
+                alertName = filter,
+                leagueName = eventInfo.league,
+                eventName = eventInfo.eventName,
+                homeName = eventInfo.home,
+                awayName = eventInfo.away,
+                alertEntryMinute = currentMinute ?: 0,
+                gameFinalScore = score,
+                odd = selectedMarket!!.marketOdd,
+                urlGame = "https://www.betfair.bet.br/exchange/plus/pt/futebol/${formatSlug(eventInfo.league)}/${formatSlug(eventInfo.home)}-X-${formatSlug(eventInfo.away)}-apostas-${eventInfo.eventId}",
+                urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${selectedMarket.marketId}"
+            )
+
             val saved = goltrixPort.save(goltrixdto)
 
             if (saved) {
                 goltrixEventSenderPort.send(goltrixdto)
+                telegramNotifierPort.sendMessageGoltrix(telegramGoltrixDto)
                 log.info("[ProcessEvent] Salvo: betfairId=${goltrixdto.betfairId} - ${goltrixdto.eventName}")
             }
 
@@ -264,4 +285,14 @@ class GoltrixService(
                 new.gameStatus != old.gameStatus ||
                 new.goltrixStatus != old.goltrixStatus ||
                 new.gameFinalScore != old.gameFinalScore
+    }
+
+
+    private fun formatSlug(text: String): String {
+        var formatted = text.replace(" - ", "-")
+            .replace(" ", "-")
+
+        formatted = URLEncoder.encode(formatted, StandardCharsets.UTF_8.toString())
+
+        return formatted.lowercase()
     }

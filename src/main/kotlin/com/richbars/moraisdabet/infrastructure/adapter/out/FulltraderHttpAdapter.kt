@@ -14,7 +14,8 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
     private val httpClientManager = HttpClientManager()
 
     private val filters = mapOf(
-        "Com Dados" to 351810,
+//        "Com Dados" to 351810,
+//        "AC Baixa" to 499858,
         "Over HT Rodrigo" to 140208,
         "Over 0.5 FT - CASA" to 140209,
         "Over 0.5 HT" to 440587,
@@ -22,8 +23,7 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
         "Over 1.5 FT" to 440589,
         "Over 2.5 FT" to 440590,
         "Over 3.5 FT" to 440591,
-        "Over 4.5 FT" to 440592,
-        "AC Baixa" to 499858
+        "Over 4.5 FT" to 440592
     )
 
     override suspend fun login(): String {

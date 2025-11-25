@@ -106,7 +106,13 @@ class BetfairHttpAdapter : BetfairHttpPort {
             val eventTypes = result.toJson().optJSONArray("eventTypes")
                 ?: throw Exception("No markets available for betfairId: $eventId")
 
-            val marketNodes = eventTypes.optJSONObject(0).optJSONArray("eventNodes").optJSONObject(0).optJSONArray("marketNodes")
+            val marketNodes = eventTypes
+                .optJSONObject(0)
+                ?.optJSONArray("eventNodes")
+                ?.optJSONObject(0)
+                ?.optJSONArray("marketNodes")
+                ?: throw Exception("Malformed response for event $eventId")
+
             val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
 
             // 🔹 Filtra mercados
@@ -122,41 +128,34 @@ class BetfairHttpAdapter : BetfairHttpPort {
                 throw Exception("No Over/Under markets found for event $eventId")
             }
 
+            // ---------------------------------------------
+            // 🔥 RULE: Return ALWAYS the FIRST First Half Goals Market
+            // ---------------------------------------------
+            firstHalfMarket = firstHalfGoalsMarkets.firstOrNull()
 
-            // Choose Market
-            if (alertName in listOf("Over HT Rodrigo", "Com Dados", "AC Baixa")) {
-                overUnderMarket = overUnderMarkets.minByOrNull {
-                    val regex = Regex("Over/Under\\s([\\d.]+)\\sGoals")
-                    val match = regex.find(it.optJSONObject("description")?.optString("marketName") ?: "")
-                    match?.groups?.get(1)?.value?.toDoubleOrNull() ?: Double.MAX_VALUE
-                }
-            }
-            else if (marketMap.containsKey(alertName)) {
-                val targetName = marketMap[alertName]
-                if (targetName?.contains("First Half") == true) {
-                    firstHalfMarket = firstHalfGoalsMarkets.firstOrNull {
-                        it.optJSONObject("description")?.optString("marketName") == targetName
-                    }
-                } else {
-                    overUnderMarket = overUnderMarkets.firstOrNull {
-                        it.optJSONObject("description")?.optString("marketName") == targetName
-                    }
-                }
+            // If First Half does not exist → fallback to Over/Under
+            if (firstHalfMarket == null) {
+                overUnderMarket = overUnderMarkets.firstOrNull()
             }
 
-            // Search Infos to Over/Under market
+            // If none exist (very rare)
+            if (firstHalfMarket == null && overUnderMarket == null) {
+                throw Exception("No usable markets found for event $eventId")
+            }
+
+            // ---------------------------------------------
+            // 🔹 Create DTO objects
+            // ---------------------------------------------
             val lay = overUnderMarket?.let { createLayFromMarketNode(it) }
             val back = firstHalfMarket?.let { createBackFromMarketNode(it) }
 
-            val res = MarketBetfairDto(lay, back)
-
-
-            return@withContext res
+            return@withContext MarketBetfairDto(lay, back)
 
         } catch (e: Exception) {
             log.error("Erro ao buscar os mercados do evento $eventId -> ${e.message}")
             return@withContext null
         }
+
 
     }
 
@@ -258,7 +257,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
             ?.takeIf { it.isNotEmpty() }
 
         val backPrice = marketNodes
-            .optJSONArray("runners")?.optJSONObject(0)
+            .optJSONArray("runners")?.optJSONObject(1)
             ?.optJSONObject("exchange")
             ?.optJSONArray("availableToBack")
             ?.optJSONObject(0)
