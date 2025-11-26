@@ -1,9 +1,6 @@
 package com.richbars.moraisdabet.core.application.service
 
-import com.richbars.moraisdabet.core.application.dto.EventBetfairDto
-import com.richbars.moraisdabet.core.application.dto.GoltrixDto
-import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
-import com.richbars.moraisdabet.core.application.dto.MarketBetfairDto
+import com.richbars.moraisdabet.core.application.dto.*
 import com.richbars.moraisdabet.core.application.port.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -12,6 +9,8 @@ import kotlinx.coroutines.supervisorScope
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.concurrent.ConcurrentHashMap
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Service
 class GoltrixService(
@@ -20,6 +19,7 @@ class GoltrixService(
     private val betfairHttpPort: BetfairHttpPort,
     private val goltrixPort: GoltrixPort,
     private val goltrixEventSenderPort: GoltrixEventSenderPort,
+    private val telegramNotifierPort: TelegramNotifierPort
 ) {
 
     private val failedEvents = ConcurrentHashMap.newKeySet<String>()
@@ -36,8 +36,8 @@ class GoltrixService(
                 }
             }
         }
-
         jobs.awaitAll()
+        verifyExit(eventIds)
     }
 
     suspend fun update() = supervisorScope {
@@ -66,7 +66,7 @@ class GoltrixService(
         val key = "$eventId|$filter"
 
         if (failedEvents.contains(key)) {
-            log.debug("Ignorando evento $key — marcado como falho")
+//            log.debug("Ignorando evento $key — marcado como falho")
             return
         }
 
@@ -75,16 +75,14 @@ class GoltrixService(
             val alreadyExists =
                 goltrixPort.findByBetfairIdAndAlertName(eventId.toLong(), filter) != null
 
-            if (alreadyExists) {
-                log.debug("Evento já existe no banco: $eventId - $filter")
-                return
-            }
+            if (alreadyExists) return
 
             log.info("Processando Evento: '$eventId', Filtro: '$filter'")
 
+
             // Betfair
             val eventInfo = betfairHttpPort.getEventById(eventId.toLong())
-            val marketInfo = betfairHttpPort.getMarketById(eventInfo.eventId, filter)
+            val marketInfo = betfairHttpPort.getMarketByIdGoltrix(eventInfo.eventId, filter)
 
             // Sofascore
             val sofascoreId = sofascoreHttpPort.getEventNameById(eventInfo.eventName)
@@ -98,25 +96,36 @@ class GoltrixService(
                 sofascoreId = sofascoreId,
                 marketInfo = marketInfo,
                 alertName = filter,
-                alertEntryMinute = currentMinute,
+                alertEntryMinute = currentMinute ?: 0,
                 alertEntryScore = score,
                 gameStatus = status,
                 gameFinalScore = score
             )
 
-            val saved = goltrixPort.save(goltrixdto)
-
-            log.info(
-                "Salvo: betfairId=${goltrixdto.betfairId} - ${goltrixdto.eventName} " +
-                        "- thread=${Thread.currentThread().name} - time=${System.nanoTime()}"
+            //DTO Goltrix Telegram
+            val telegramGoltrixDto = TelegramGoltrixDto(
+                alertName = filter,
+                leagueName = eventInfo.league,
+                eventName = eventInfo.eventName,
+                homeName = eventInfo.home,
+                awayName = eventInfo.away,
+                alertEntryMinute = currentMinute ?: 0,
+                gameFinalScore = score,
+                odd = marketInfo?.back!!.marketOdd,
+                urlGame = "https://www.betfair.bet.br/exchange/plus/pt/futebol/${formatSlug(eventInfo.league)}/${formatSlug(eventInfo.home)}-X-${formatSlug(eventInfo.away)}-apostas-${eventInfo.eventId}",
+                urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${marketInfo.back.marketId}"
             )
+
+            val saved = goltrixPort.save(goltrixdto)
 
             if (saved) {
                 goltrixEventSenderPort.send(goltrixdto)
+                telegramNotifierPort.sendMessageGoltrix(telegramGoltrixDto)
+                log.info("[ProcessEvent] Salvo: betfairId=${goltrixdto.betfairId} - ${goltrixdto.eventName}")
             }
 
         } catch (ex: Exception) {
-            log.error("Erro ao processar Evento='$eventId', Filtro='$filter': ${ex.message}")
+            log.error("Erro ao processar Evento='$eventId', Filtro='$filter'", ex)
             failedEvents.add(key)
         }
     }
@@ -125,6 +134,7 @@ class GoltrixService(
     private suspend fun processMatchUpdate(match: GoltrixDto) {
 
         try {
+
             val marketId = match.marketHtId ?: match.marketUnderId
 
             // BetfairService
@@ -137,16 +147,21 @@ class GoltrixService(
             val goltrixUpdate = updateGoltrixDto(
                 match.betfairId,
                 match.alertName,
-                null,
+                match.alertExitMinute,
                 scoreMatch,
                 statusMatch,
                 statusMarket,
                 scoreMatch
             )
 
+            if (!hasDifference(goltrixUpdate, match)) return
+
             val saved = goltrixPort.updateGoltrix(goltrixUpdate)
 
-            if (saved) goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+            if (saved) {
+                goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+                log.info("[ProcessUpdate] Atualizado: betfairId=${match.betfairId} - ${match.eventName} - ${match.alertName} - ${match.gameStatus} - ${match.goltrixStatus}")
+            }
 
         } catch (e: Exception) {
             log.error("Error in update match betfairid: ${match.betfairId} | ${e.message}")
@@ -156,9 +171,44 @@ class GoltrixService(
 
 
     suspend fun verifyExit(eventIds: Map<String, MutableList<String>>) {
-        val allMatches = goltrixPort.findAll()
 
+        // Cria a lista de chaves ativas vindas da API
+        val activeKeys = eventIds.flatMap { (eventId, filters) ->
+            filters.map { filter -> "$eventId|$filter" }
+        }.toSet()
+
+        // Busca todos os jogos ativos no banco
+        val allMatches = goltrixPort.verifyExit()
+
+        // Filtra jogos que não aparecem mais no eventIds
+        val deadMatches = allMatches.filter { match ->
+            val key = "${match.betfairId}|${match.alertName}"
+            key !in activeKeys
+        }
+
+        deadMatches.forEach {
+           val currentMinute = sofascoreHttpPort.getCurrentGameMinuteById(it.sofascoreId)
+            val goltrixUpdate = updateGoltrixDto(
+                it.betfairId,
+                it.alertName,
+                currentMinute,
+                it.alertEntryScore,
+                it.gameStatus,
+                it.goltrixStatus ?: "",
+                it.gameFinalScore
+            )
+
+            val saved = goltrixPort.updateGoltrix(goltrixUpdate)
+            
+            if (saved) {
+                goltrixEventSenderPort.sendUpdate(goltrixUpdate)
+                log.info("[VerifyExit] Ficou morto: betfair=${it.betfairId} filter=${it.alertName} - alertExit=${currentMinute}")
+            }
+        }
+
+        }
     }
+
 
     fun createGoltrixDto(
         eventInfo: EventBetfairDto,
@@ -223,4 +273,20 @@ class GoltrixService(
         )
     }
 
-}
+    private fun hasDifference(new: GoltrixUpdate, old: GoltrixDto): Boolean {
+        return new.alertExitMinute != old.alertExitMinute ||
+                new.alertExitScore != old.alertExitScore ||
+                new.gameStatus != old.gameStatus ||
+                new.goltrixStatus != old.goltrixStatus ||
+                new.gameFinalScore != old.gameFinalScore
+    }
+
+
+    private fun formatSlug(text: String): String {
+        var formatted = text.replace(" - ", "-")
+            .replace(" ", "-")
+
+        formatted = URLEncoder.encode(formatted, StandardCharsets.UTF_8.toString())
+
+        return formatted.lowercase()
+    }

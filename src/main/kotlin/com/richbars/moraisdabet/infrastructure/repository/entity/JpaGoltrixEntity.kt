@@ -35,19 +35,19 @@ data class JpaGoltrixEntity(
     val alertMarketUnderName: String? = null,
 
     @Column("alert_odd_under")
-    val alertOddUnder: Double? = null,
+    val alertOddUnder: String? = null,
 
     @Column("alert_market_ht_name")
     val alertMarketHtName: String? = null,
 
     @Column("alert_odd_ht")
-    val alertOddHt: Double? = null,
+    val alertOddHt: String? = null,
 
     @Column("market_under_id")
-    val marketUnderId: Double? = null,
+    val marketUnderId: String? = null,
 
     @Column("market_ht_id")
-    val marketHtId: Double? = null,
+    val marketHtId: String? = null,
 
     @Column("alert_name")
     val alertName: String,

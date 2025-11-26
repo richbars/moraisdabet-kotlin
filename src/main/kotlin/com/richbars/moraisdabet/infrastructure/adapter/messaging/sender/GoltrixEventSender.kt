@@ -50,7 +50,7 @@ class GoltrixEventSender(
             .build()
 
         sqsAsyncClient.sendMessage(request).await()
-        log.info("Message sent successfully → $json")
+        log.info("[GoltrixSenderCreate] Message sent successfully → $json")
     }
 
     override suspend fun sendUpdate(goltrixUpdate: GoltrixUpdate) {
@@ -74,7 +74,7 @@ class GoltrixEventSender(
             .build()
 
         sqsAsyncClient.sendMessage(request).await()
-        log.info("Message Update sent successfully → $json")
+        log.info("[GoltrixSenderUpdate] Message Update sent successfully → $json")
     }
 
 }

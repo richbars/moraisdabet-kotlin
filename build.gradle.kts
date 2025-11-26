@@ -21,6 +21,7 @@ repositories {
 }
 
 dependencies {
+	testImplementation("com.ninja-squad:springmockk:4.0.2")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")

@@ -27,11 +27,13 @@ interface JpaGoltrixRepository : CoroutineCrudRepository<JpaGoltrixEntity, Long>
 """)
     suspend fun insertWithConflict(entity: JpaGoltrixEntity)
 
+    @Query("SELECT * FROM goltrix WHERE alert_exit_minute IS NULL")
+    suspend fun verifyExit(): List<JpaGoltrixEntity>
 
     @Query("SELECT * FROM goltrix WHERE betfair_id = :betfairId AND alert_name = :alertName")
     suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): JpaGoltrixEntity?
 
-    @Query("SELECT * FROM goltrix WHERE game_status = 'inprogress'")
+    @Query("SELECT * FROM goltrix WHERE game_status != 'finished'")
     suspend fun getMatchsInProgress(): List<JpaGoltrixEntity>
 
     @Query("SELECT * FROM goltrix")

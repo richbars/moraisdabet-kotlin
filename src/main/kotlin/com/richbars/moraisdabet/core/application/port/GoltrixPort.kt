@@ -8,6 +8,7 @@ interface GoltrixPort {
     suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): GoltrixDto?
     suspend fun getMatchsInProgress(): List<GoltrixDto>
     suspend fun deleteByBetfairId(betfairId: Long, alertName: String)
-    fun findAll(): List<GoltrixDto>
+    suspend fun findAll(): List<GoltrixDto>
     suspend fun updateGoltrix(goltrix: GoltrixUpdate): Boolean
+    suspend fun verifyExit(): List<GoltrixDto>
 }
