@@ -23,7 +23,8 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
         "Over 1.5 FT" to 440589,
         "Over 2.5 FT" to 440590,
         "Over 3.5 FT" to 440591,
-        "Over 4.5 FT" to 440592
+        "Over 4.5 FT" to 440592,
+        "Over 0.5 FT - VISITANTE" to 140210
     )
 
     override suspend fun login(): String {

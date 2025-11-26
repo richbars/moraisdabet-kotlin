@@ -38,8 +38,10 @@ class BetfairHttpAdapter : BetfairHttpPort {
             "Over 2.5 FT" to "Over/Under 2.5 Goals",
             "Over 3.5 FT" to "Over/Under 3.5 Goals",
             "Over 4.5 FT" to "Over/Under 4.5 Goals",
+            "Over 0.5 FT - CASA" to "Over/Under 0.5 Goals",
+            "Over 0.5 FT - Visitante" to "Over/Under 0.5 Goals",
             "Over 0.5 HT" to "First Half Goals 0.5",
-            "Over 0.5 FT - CASA" to "First Half Goals 0.5"
+            "Over HT Rodrigo" to "First Half"
         )
 
     }
@@ -158,6 +160,59 @@ class BetfairHttpAdapter : BetfairHttpPort {
 
 
     }
+
+    override suspend fun getMarketByIdGoltrix(eventId: Long, alertName: String): MarketBetfairDto? =
+        withContext(Dispatchers.IO) {
+
+            val params = mapOf(
+                "eventIds" to eventId.toString(),
+                "locale" to "en_US",
+                "types" to "MARKET_STATE,EVENT,MARKET_DESCRIPTION",
+                "currencyCode" to "BRL"
+            )
+
+            // Nome real do mercado que vamos usar no contains()
+            val translatedMarketName = marketMap[alertName]
+                ?: throw Exception("No mapping found for alertName='$alertName'")
+
+            try {
+
+                val result = httpClientManager.get(BY_EVENT_URL, DEFAULT_HEADERS, params, true)
+
+                val eventTypes = result.toJson().optJSONArray("eventTypes")
+                    ?: throw Exception("No markets available for betfairId: $eventId")
+
+                val marketNodes = eventTypes
+                    .optJSONObject(0)
+                    ?.optJSONArray("eventNodes")
+                    ?.optJSONObject(0)
+                    ?.optJSONArray("marketNodes")
+                    ?: throw Exception("Malformed response for event $eventId")
+
+                val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
+
+                // Agora pesquisa pelo nome traduzido
+                val matchingMarkets = marketList.filter {
+                    it.optJSONObject("description")
+                        ?.optString("marketName")
+                        ?.contains(translatedMarketName, ignoreCase = true) == true
+                }
+
+                if (matchingMarkets.isEmpty()) {
+                    throw Exception("No markets found using translated name '$translatedMarketName'")
+                }
+
+                val selectedMarket = matchingMarkets.first()
+                val selectedBack = createBackFromMarketNode(selectedMarket)
+
+                return@withContext MarketBetfairDto(null, selectedBack)
+
+            } catch (e: Exception) {
+                log.error("Erro ao buscar os mercados do evento $eventId -> ${e.message}")
+                return@withContext null
+            }
+        }
+
 
     override suspend fun getStatusMarketById(marketId: String): String =
         withContext(Dispatchers.IO) {

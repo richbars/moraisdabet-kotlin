@@ -82,7 +82,7 @@ class GoltrixService(
 
             // Betfair
             val eventInfo = betfairHttpPort.getEventById(eventId.toLong())
-            val marketInfo = betfairHttpPort.getMarketById(eventInfo.eventId, filter)
+            val marketInfo = betfairHttpPort.getMarketByIdGoltrix(eventInfo.eventId, filter)
 
             // Sofascore
             val sofascoreId = sofascoreHttpPort.getEventNameById(eventInfo.eventName)
@@ -102,19 +102,6 @@ class GoltrixService(
                 gameFinalScore = score
             )
 
-            val selectedMarket: MarketBasePort? =
-                listOfNotNull(
-                    marketInfo?.lay,
-                    marketInfo?.back
-                )
-                    .firstOrNull { !it.marketId.isNullOrBlank() }
-
-            if (selectedMarket == null) {
-                log.error("Nenhum mercado válido encontrado para eventId=$eventId, filter=$filter → lay=${marketInfo?.lay}, back=${marketInfo?.back}")
-                failedEvents.add(key)
-                return
-            }
-
             //DTO Goltrix Telegram
             val telegramGoltrixDto = TelegramGoltrixDto(
                 alertName = filter,
@@ -124,9 +111,9 @@ class GoltrixService(
                 awayName = eventInfo.away,
                 alertEntryMinute = currentMinute ?: 0,
                 gameFinalScore = score,
-                odd = selectedMarket.marketOdd,
+                odd = marketInfo?.back!!.marketOdd,
                 urlGame = "https://www.betfair.bet.br/exchange/plus/pt/futebol/${formatSlug(eventInfo.league)}/${formatSlug(eventInfo.home)}-X-${formatSlug(eventInfo.away)}-apostas-${eventInfo.eventId}",
-                urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${selectedMarket.marketId}"
+                urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${marketInfo.back.marketId}"
             )
 
             val saved = goltrixPort.save(goltrixdto)

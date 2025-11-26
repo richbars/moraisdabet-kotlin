@@ -24,7 +24,7 @@ class BetfairHttpTest {
     fun `should load spring and call getMarketById successfully`() = runTest {
         val betfairHttpAdapter = BetfairHttpAdapter()
 
-        val t = betfairHttpAdapter.getMarketById(34993626, "First Half")
+        val t = betfairHttpAdapter.getMarketByIdGoltrix(34929518, "Over HT Rodrigo")
         println(t)
     }
 }
