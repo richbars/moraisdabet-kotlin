@@ -39,7 +39,7 @@ class TelegramNotifierHttpAdapter : TelegramNotifierPort {
 
                 when (response.code) {
                     200 -> {
-                        log.info("Message sent successfully ✅ | TEXT: $text")
+                        log.info("Message sent successfully ✅ | Game = ${telegramGoltrixDto.eventName} - Alert = ${telegramGoltrixDto.alertName}")
                         return@withContext true
                     }
 

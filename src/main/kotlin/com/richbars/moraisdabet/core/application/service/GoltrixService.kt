@@ -66,7 +66,7 @@ class GoltrixService(
         val key = "$eventId|$filter"
 
         if (failedEvents.contains(key)) {
-            log.debug("Ignorando evento $key — marcado como falho")
+//            log.debug("Ignorando evento $key — marcado como falho")
             return
         }
 
@@ -103,10 +103,17 @@ class GoltrixService(
             )
 
             val selectedMarket: MarketBasePort? =
-                marketInfo?.lay?.takeIf { !it.marketId.isNullOrBlank() }
-                    ?: marketInfo?.back?.takeIf { !it.marketId.isNullOrBlank() }
+                listOfNotNull(
+                    marketInfo?.lay,
+                    marketInfo?.back
+                )
+                    .firstOrNull { !it.marketId.isNullOrBlank() }
 
-
+            if (selectedMarket == null) {
+                log.error("Nenhum mercado válido encontrado para eventId=$eventId, filter=$filter → lay=${marketInfo?.lay}, back=${marketInfo?.back}")
+                failedEvents.add(key)
+                return
+            }
 
             //DTO Goltrix Telegram
             val telegramGoltrixDto = TelegramGoltrixDto(
@@ -117,7 +124,7 @@ class GoltrixService(
                 awayName = eventInfo.away,
                 alertEntryMinute = currentMinute ?: 0,
                 gameFinalScore = score,
-                odd = selectedMarket!!.marketOdd,
+                odd = selectedMarket.marketOdd,
                 urlGame = "https://www.betfair.bet.br/exchange/plus/pt/futebol/${formatSlug(eventInfo.league)}/${formatSlug(eventInfo.home)}-X-${formatSlug(eventInfo.away)}-apostas-${eventInfo.eventId}",
                 urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${selectedMarket.marketId}"
             )
@@ -131,7 +138,7 @@ class GoltrixService(
             }
 
         } catch (ex: Exception) {
-            log.error("Erro ao processar Evento='$eventId', Filtro='$filter': ${ex.message}")
+            log.error("Erro ao processar Evento='$eventId', Filtro='$filter'", ex)
             failedEvents.add(key)
         }
     }
@@ -205,7 +212,7 @@ class GoltrixService(
             )
 
             val saved = goltrixPort.updateGoltrix(goltrixUpdate)
-            println("salvo papai")
+            
             if (saved) {
                 goltrixEventSenderPort.sendUpdate(goltrixUpdate)
                 log.info("[VerifyExit] Ficou morto: betfair=${it.betfairId} filter=${it.alertName} - alertExit=${currentMinute}")
