@@ -41,7 +41,8 @@ class BetfairHttpAdapter : BetfairHttpPort {
             "Over 0.5 FT - CASA" to "Over/Under 0.5 Goals",
             "Over 0.5 FT - Visitante" to "Over/Under 0.5 Goals",
             "Over 0.5 HT" to "First Half Goals 0.5",
-            "Over HT Rodrigo" to "First Half"
+            "Over HT Rodrigo" to "First Half",
+            "Com Dados" to "First Half"
         )
 
     }
@@ -171,7 +172,6 @@ class BetfairHttpAdapter : BetfairHttpPort {
                 "currencyCode" to "BRL"
             )
 
-            // Nome real do mercado que vamos usar no contains()
             val translatedMarketName = marketMap[alertName]
                 ?: throw Exception("No mapping found for alertName='$alertName'")
 
@@ -191,7 +191,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
 
                 val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
 
-                // Agora pesquisa pelo nome traduzido
+                // Filtra pelo nome traduzido
                 val matchingMarkets = marketList.filter {
                     it.optJSONObject("description")
                         ?.optString("marketName")
@@ -202,7 +202,15 @@ class BetfairHttpAdapter : BetfairHttpPort {
                     throw Exception("No markets found using translated name '$translatedMarketName'")
                 }
 
-                val selectedMarket = matchingMarkets.first()
+                // Ordena pelos menores valores
+                val selectedMarket = matchingMarkets
+                    .sortedBy { market ->
+                        extractLineFromMarketName(
+                            market.optJSONObject("description")?.optString("marketName")
+                        ) ?: Double.MAX_VALUE
+                    }
+                    .first()
+
                 val selectedBack = createBackFromMarketNode(selectedMarket)
 
                 return@withContext MarketBetfairDto(null, selectedBack)
@@ -212,6 +220,17 @@ class BetfairHttpAdapter : BetfairHttpPort {
                 return@withContext null
             }
         }
+
+    // Extrai o número final (ex: 0.5, 1.5)
+    private fun extractLineFromMarketName(name: String?): Double? {
+        if (name == null) return null
+
+        val regex = Regex("""([0-9]+\.[0-9]+)""")
+        val match = regex.find(name) ?: return null
+
+        return match.value.toDouble()
+    }
+
 
 
     override suspend fun getStatusMarketById(marketId: String): String =

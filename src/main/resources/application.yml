@@ -32,6 +32,9 @@ spring:
     cornerpro:
       sheet-name: Produção
 
+fulltrader:
+  username: ${EMAIL}
+  password: ${PASSWORD}
 
 logging:
   level:

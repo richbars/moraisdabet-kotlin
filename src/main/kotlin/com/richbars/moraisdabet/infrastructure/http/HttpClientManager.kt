@@ -6,14 +6,15 @@ import okhttp3.*
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.net.URLEncoder
 import org.springframework.http.client.reactive.ReactorClientHttpConnector
+import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import reactor.netty.http.client.HttpClient
 import java.security.SecureRandom
 import javax.net.ssl.*
 
+@Service
 open class HttpClientManager {
 
     private var httpClient: OkHttpClient? = null

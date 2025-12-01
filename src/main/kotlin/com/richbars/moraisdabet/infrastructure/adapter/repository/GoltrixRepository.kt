@@ -1,14 +1,11 @@
 package com.richbars.moraisdabet.infrastructure.adapter.repository
 
-import com.richbars.moraisdabet.core.application.dto.GoltrixDto
-import com.richbars.moraisdabet.infrastructure.repository.entity.JpaGoltrixEntity
+import com.richbars.moraisdabet.infrastructure.repository.entity.GoltrixEntity
 import org.springframework.data.r2dbc.repository.Modifying
 import org.springframework.data.r2dbc.repository.Query
-import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.kotlin.CoroutineCrudRepository
-import org.springframework.data.repository.reactive.ReactiveCrudRepository
 
-interface JpaGoltrixRepository : CoroutineCrudRepository<JpaGoltrixEntity, Long> {
+interface GoltrixRepository : CoroutineCrudRepository<GoltrixEntity, Long> {
 
     @Query("""
     INSERT INTO goltrix(
@@ -25,19 +22,19 @@ interface JpaGoltrixRepository : CoroutineCrudRepository<JpaGoltrixEntity, Long>
     )
     ON CONFLICT (betfair_id, alert_name) DO NOTHING
 """)
-    suspend fun insertWithConflict(entity: JpaGoltrixEntity)
+    suspend fun insertWithConflict(entity: GoltrixEntity)
 
     @Query("SELECT * FROM goltrix WHERE alert_exit_minute IS NULL")
-    suspend fun verifyExit(): List<JpaGoltrixEntity>
+    suspend fun verifyExit(): List<GoltrixEntity>
 
     @Query("SELECT * FROM goltrix WHERE betfair_id = :betfairId AND alert_name = :alertName")
-    suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): JpaGoltrixEntity?
+    suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): GoltrixEntity?
 
     @Query("SELECT * FROM goltrix WHERE game_status != 'finished'")
-    suspend fun getMatchsInProgress(): List<JpaGoltrixEntity>
+    suspend fun getMatchsInProgress(): List<GoltrixEntity>
 
     @Query("SELECT * FROM goltrix")
-    suspend fun getAll(): List<JpaGoltrixEntity>
+    suspend fun getAll(): List<GoltrixEntity>
 
     @Query("DELETE FROM goltrix WHERE betfair_id = :betfairId AND alert_name = :alertName")
     suspend fun deleteByBetfairId(betfairId: Long, alertName: String)

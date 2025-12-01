@@ -1,5 +1,6 @@
 package com.richbars.moraisdabet.core.application.service
 
+import org.springframework.context.annotation.Lazy
 import com.richbars.moraisdabet.core.application.dto.*
 import com.richbars.moraisdabet.core.application.port.*
 import kotlinx.coroutines.Dispatchers
@@ -8,9 +9,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.supervisorScope
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.concurrent.ConcurrentHashMap
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class GoltrixService(
@@ -135,10 +136,10 @@ class GoltrixService(
 
         try {
 
-            val marketId = match.marketHtId ?: match.marketUnderId
+            val marketId = match.marketId
 
             // BetfairService
-            val statusMarket = betfairHttpPort.getStatusMarketById(marketId!!)
+            val statusMarket = betfairHttpPort.getStatusMarketById(marketId)
 
             // SofascoreService
             val scoreMatch = sofascoreHttpPort.getScoreGameById(match.sofascoreId)
@@ -230,14 +231,9 @@ class GoltrixService(
             awayName = eventInfo.away,
             date = eventInfo.date,
 
-            alertMarketUnderName = marketInfo?.lay?.marketName,
-            alertOddUnder = marketInfo?.lay?.marketOdd,
-
-            alertMarketHtName = marketInfo?.back?.marketName,
-            alertOddHt = marketInfo?.back?.marketOdd,
-
-            marketUnderId = marketInfo?.lay?.marketId,
-            marketHtId = marketInfo?.back?.marketId,
+            marketName = marketInfo!!.back!!.marketName,
+            marketOdd = marketInfo.back!!.marketOdd,
+            marketId = marketInfo.back.marketId,
 
             alertName = alertName,
             alertEntryMinute = alertEntryMinute,

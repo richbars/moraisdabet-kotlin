@@ -5,16 +5,26 @@ import com.richbars.moraisdabet.infrastructure.http.HttpClientManager
 import com.richbars.moraisdabet.infrastructure.util.toJson
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
-class FulltraderHttpAdapter : FulltraderHttpPort {
+class FulltraderHttpAdapter(
 
-    val log = LoggerFactory.getLogger(FulltraderHttpAdapter::class.java)
-    private val httpClientManager = HttpClientManager()
+    private val httpClientManager: HttpClientManager,
+
+    @Value("\${fulltrader.username}")
+    private val username: String,
+
+    @Value("\${fulltrader.password}")
+    private val password: String
+
+) : FulltraderHttpPort {
+
+    private val log = LoggerFactory.getLogger(FulltraderHttpAdapter::class.java)
 
     private val filters = mapOf(
-//        "Com Dados" to 351810,
+        //        "Com Dados" to 351810,
 //        "AC Baixa" to 499858,
         "Over HT Rodrigo" to 140208,
         "Over 0.5 FT - CASA" to 140209,
@@ -32,8 +42,8 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
 
         val payload = JSONObject(
             mapOf(
-                "username" to System.getenv("EMAIL"),
-                "password" to System.getenv("PASSWORD"),
+                "username" to username,
+                "password" to password,
                 "recaptcha" to "fulltrader"
             )
         ).toString()
@@ -42,8 +52,8 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
 
         val response = httpClientManager.post(url, headers, payload).toJson()
 
-        val token = response.optString("access_token")
-        return token ?: throw Exception("It was not possible to retrieve the token.")
+        return response.optString("access_token")
+            ?: throw Exception("It was not possible to retrieve the token.")
     }
 
     override suspend fun getEventIdsToGoltrix(): Map<String, MutableList<String>> {
@@ -51,13 +61,13 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
         val eventIds = mutableMapOf<String, MutableList<String>>()
         val url = "https://gamesapi.fulltraderapps.com/games/live"
         val token = login()
+
         val headers = mapOf(
             "accept" to "application/json, text/plain, */*",
             "authorization" to "Bearer $token"
         )
 
         return try {
-
             for ((filterName, filterId) in filters) {
                 val queryParams = mapOf(
                     "orderBy" to "",
@@ -79,22 +89,30 @@ class FulltraderHttpAdapter : FulltraderHttpPort {
                 for (i in 0 until games.length()) {
                     val g = games.getJSONArray(i)
                     val eventId = g.optString(13, null) ?: continue
+
                     if (eventId.isNotEmpty()) {
                         eventIds.getOrPut(eventId) { mutableListOf() }.add(filterName)
                     }
                 }
             }
 
-            if (eventIds.isNotEmpty()) {
-//                log.debug("Total number of events collected: {}", eventIds.size)
-            }
-
             eventIds
-
         } catch (e: Exception) {
             log.error("Error retrieving events in Goltrix: ${e.message}", e)
             emptyMap()
         }
+    }
 
+    override suspend fun getGamesChardraw() {
+        val accessToken = login()
+        val url = "https://apiprelive.fulltraderapps.com/filters/6916432848a5ca4a174a0cab"
+        val headers = mapOf(
+            "accept" to "application/json, text/plain, */*",
+            "authorization" to "Bearer $accessToken"
+        )
+        val params = mapOf("t" to "t")
+
+        val result = httpClientManager.get(url, headers, params, true).toJson()
+        println(result)
     }
 }

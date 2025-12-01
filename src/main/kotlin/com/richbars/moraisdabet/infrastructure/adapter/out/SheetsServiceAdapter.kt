@@ -71,23 +71,19 @@ class SheetsServiceAdapter : SheetsServicePort {
 
                 goltrixDto.alertName,                          // 8 Nome Alerta
 
-                goltrixDto.alertMarketUnderName ?: "",         // 9 Mercado Lay
-                goltrixDto.alertOddUnder?.toString() ?: "",    // 10 Odd Lay
-                goltrixDto.marketUnderId?.toString() ?: "",    // 11 Id Mercado Lay
+                goltrixDto.marketName,         // 9 Mercado Lay
+                goltrixDto.marketOdd,    // 10 Odd Lay
+                goltrixDto.marketId,    // 11 Id Mercado Lay
 
-                goltrixDto.alertMarketHtName ?: "",            // 12 Mercado HT
-                goltrixDto.alertOddHt?.toString() ?: "",       // 13 Odd HT
-                goltrixDto.marketHtId?.toString() ?: "",       // 14 Id Mercado HT
+                goltrixDto.alertEntryMinute?.toString() ?: "", // 12 Minuto Entrada Alerta
+                goltrixDto.alertEntryScore,                    // 13 Placar Minuto Alerta
 
-                goltrixDto.alertEntryMinute?.toString() ?: "", // 15 Minuto Entrada Alerta
-                goltrixDto.alertEntryScore,                    // 16 Placar Minuto Alerta
+                goltrixDto.alertExitMinute ?: "",              // 14 Saída Minuto Alerta
+                goltrixDto.alertExitScore ?: "",               // 15 Placar Saída
 
-                goltrixDto.alertExitMinute ?: "",              // 17 Saída Minuto Alerta
-                goltrixDto.alertExitScore ?: "",               // 18 Placar Saída
-
-                goltrixDto.gameStatus,                         // 19 Status Partida
-                goltrixDto.goltrixStatus ?: "",                // 20 Goltrix Status
-                goltrixDto.gameFinalScore                      // 21 Placar Final
+                goltrixDto.gameStatus,                         // 16 Status Partida
+                goltrixDto.goltrixStatus ?: "",                // 17 Goltrix Status
+                goltrixDto.gameFinalScore                      // 18 Placar Final
             )
 
 
@@ -112,18 +108,17 @@ class SheetsServiceAdapter : SheetsServicePort {
         return try {
             val sheets = getSheetsService()
 
-            // 1. Buscar conteúdo da planilha
             val response = sheets.spreadsheets().values()
-                .get(spreadsheetId, "$goltrixSheetName!A:Z")
+                .get(spreadsheetId, "$goltrixSheetName!A:R") // Existem 18 colunas (A..R)
                 .execute()
 
             val rows = response.getValues() ?: emptyList()
 
-            // 2. Identificar a linha correta (match por betfairId + alertName)
+            // Encontrar linha pelo betfairId + alertName
             val targetRowIndex = rows.indexOfFirst { row ->
-                row.size >= 21 &&
-                        row[0].toString() == goltrixUpdate.betfairId.toString() &&   // CORRIGIDO
-                        row[7].toString().trim() == goltrixUpdate.alertName.trim()  // CORRIGIDO
+                row.size >= 18 &&
+                        row[0].toString() == goltrixUpdate.betfairId.toString() &&
+                        row[7].toString().trim() == goltrixUpdate.alertName.trim()
             }
 
             if (targetRowIndex == -1) {
@@ -131,27 +126,23 @@ class SheetsServiceAdapter : SheetsServicePort {
                 return goltrixUpdate
             }
 
-            // 3. Clonar a linha original
             val row = rows[targetRowIndex].toMutableList()
 
-            // 4. Atualizar colunas corretas
-            row[16] = goltrixUpdate.alertExitMinute ?: ""   // Saída Minuto
-            row[17] = goltrixUpdate.alertExitScore          // Placar Saída
-            row[18] = goltrixUpdate.gameStatus              // Status Partida
-            row[19] = goltrixUpdate.goltrixStatus           // Goltrix Status
-            row[20] = goltrixUpdate.gameFinalScore          // Placar Final
+            // Atualizar colunas corretas
+            row[13] = goltrixUpdate.alertExitMinute ?: ""   // Saída Minuto
+            row[14] = goltrixUpdate.alertExitScore          // Placar Saída
+            row[15] = goltrixUpdate.gameStatus              // Status Partida
+            row[16] = goltrixUpdate.goltrixStatus           // Goltrix Status
+            row[17] = goltrixUpdate.gameFinalScore          // Placar Final
 
-            // 5. Criar ValueRange com a linha atualizada
             val body = ValueRange().setValues(listOf(row))
 
-            // 6. Calcular o número real da linha (+1 pelo cabeçalho)
-            val actualRowNumber = targetRowIndex + 1
+            val actualRowNumber = targetRowIndex + 1 // +1 por causa do cabeçalho
 
-            // 7. Atualizar no Google Sheets
             sheets.spreadsheets().values()
                 .update(
                     spreadsheetId,
-                    "$goltrixSheetName!A$actualRowNumber:Z$actualRowNumber",
+                    "$goltrixSheetName!A$actualRowNumber:R$actualRowNumber",
                     body
                 )
                 .setValueInputOption("RAW")
@@ -166,5 +157,6 @@ class SheetsServiceAdapter : SheetsServicePort {
             throw RuntimeException("Falha ao atualizar no Google Sheets", e)
         }
     }
+
 
 }
