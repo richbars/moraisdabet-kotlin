@@ -39,7 +39,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
             "Over 3.5 FT" to "Over/Under 3.5 Goals",
             "Over 4.5 FT" to "Over/Under 4.5 Goals",
             "Over 0.5 FT - CASA" to "Over/Under 0.5 Goals",
-            "Over 0.5 FT - Visitante" to "Over/Under 0.5 Goals",
+            "Over 0.5 FT - VISITANTE" to "Over/Under 0.5 Goals",
             "Over 0.5 HT" to "First Half Goals 0.5",
             "Over HT Rodrigo" to "First Half",
             "Com Dados" to "First Half"

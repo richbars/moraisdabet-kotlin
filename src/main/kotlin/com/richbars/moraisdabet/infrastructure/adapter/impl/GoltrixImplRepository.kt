@@ -1,4 +1,4 @@
-package com.richbars.moraisdabet.infrastructure.adapter.repository
+package com.richbars.moraisdabet.infrastructure.adapter.impl
 
 
 import com.richbars.moraisdabet.core.application.dto.GoltrixDto
@@ -6,6 +6,7 @@ import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
 import com.richbars.moraisdabet.core.application.port.GoltrixPort
 import com.richbars.moraisdabet.infrastructure.adapter.mapper.toEntity
 import com.richbars.moraisdabet.infrastructure.adapter.mapper.toModel
+import com.richbars.moraisdabet.infrastructure.adapter.repository.GoltrixRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
 
