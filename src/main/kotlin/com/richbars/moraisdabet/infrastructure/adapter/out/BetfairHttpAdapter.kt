@@ -1,10 +1,7 @@
 package com.richbars.moraisdabet.infrastructure.adapter.out
 
+import com.richbars.moraisdabet.core.application.dto.*
 import com.richbars.moraisdabet.core.application.port.BetfairHttpPort
-import com.richbars.moraisdabet.core.application.dto.Back
-import com.richbars.moraisdabet.core.application.dto.EventBetfairDto
-import com.richbars.moraisdabet.core.application.dto.Lay
-import com.richbars.moraisdabet.core.application.dto.MarketBetfairDto
 import com.richbars.moraisdabet.infrastructure.http.HttpClientManager
 import com.richbars.moraisdabet.infrastructure.util.toJson
 import kotlinx.coroutines.Dispatchers
@@ -287,7 +284,96 @@ class BetfairHttpAdapter : BetfairHttpPort {
             }
         }
 
+    override suspend fun getMarketByIdChardraw(eventId: Long): MarketBetfairPeriodDto =
+        withContext(Dispatchers.IO) {
 
+            val params = mapOf(
+                "eventIds" to eventId.toString(),
+                "locale" to "en_US",
+                "types" to "MARKET_STATE,EVENT,MARKET_DESCRIPTION",
+                "currencyCode" to "BRL"
+            )
+
+            return@withContext try {
+
+                val result = httpClientManager.get(BY_EVENT_URL, DEFAULT_HEADERS, params, true)
+
+                val eventTypes = result.toJson().optJSONArray("eventTypes")
+                    ?: throw Exception("No markets available for betfairId: $eventId")
+
+                val marketNodes = eventTypes
+                    .optJSONObject(0)
+                    ?.optJSONArray("eventNodes")
+                    ?.optJSONObject(0)
+                    ?.optJSONArray("marketNodes")
+                    ?: throw Exception("Malformed response for event $eventId")
+
+                val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
+
+                val marketHT = marketList.first {
+                    it.optJSONObject("description")
+                        ?.optString("marketName")
+                        .orEmpty()
+                        .contains("First Half Goals 0.5", ignoreCase = true)
+                }
+
+                val marketFT = marketList.first {
+                    it.optJSONObject("description")
+                        ?.optString("marketName")
+                        .orEmpty()
+                        .contains("Over/Under 0.5 Goals")
+                }
+
+                val halftime = createObjectHalftime(marketHT)
+                val fulltime = createObjectFulltime(marketFT)
+
+                MarketBetfairPeriodDto(halftime, fulltime)
+
+            } catch (e: Exception) {
+                log.error("Error while retrieving Half-Time and Full-Time markets for eventId=$eventId", e)
+                log.debug("Market not found or inactive for eventId=$eventId — match may be finished or currently in-play.")
+                throw e
+            }
+    }
+
+
+    private suspend fun createObjectHalftime(market: JSONObject): Halftime {
+
+        val marketNodes = getMarketById(market.optString("marketId"))
+
+        val layPrice = marketNodes
+            .optJSONArray("runners")?.optJSONObject(1)
+            ?.optJSONObject("exchange")
+            ?.optJSONArray("availableToBack")
+            ?.optJSONObject(0)
+            ?.optDouble("price")
+            ?.takeIf { it > 0 }
+
+        return Halftime(
+            market.optJSONObject("description").optString("marketName"),
+            market.optString("marketId"),
+            layPrice.toString()
+        )
+    }
+
+    private suspend fun createObjectFulltime(market: JSONObject): Fulltime {
+
+        val marketNodes = getMarketById(market.optString("marketId"))
+
+        val layPrice = marketNodes
+            .optJSONArray("runners")?.optJSONObject(1)
+            ?.optJSONObject("exchange")
+            ?.optJSONArray("availableToBack")
+            ?.optJSONObject(0)
+            ?.optDouble("price")
+            ?.takeIf { it > 0 }
+
+        return Fulltime(
+            market.optJSONObject("description").optString("marketName"),
+            market.optString("marketId"),
+            layPrice.toString()
+        )
+    }
 
     // Create Object Lay
     private suspend fun createLayFromMarketNode(marketNode: JSONObject): Lay? {

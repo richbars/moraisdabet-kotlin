@@ -42,6 +42,8 @@ dependencies {
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.9.0")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
+	implementation("me.paulschwarz:spring-dotenv:4.0.0")
+
 	implementation(platform("software.amazon.awssdk:bom:2.25.31"))
 	implementation("software.amazon.awssdk:sqs")
 	implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs:3.2.0")
@@ -76,4 +78,5 @@ tasks.withType<Test> {
 
 configurations.all {
 	exclude(group = "commons-logging", module = "commons-logging")
+	exclude(group = "com.vaadin.external.google", module = "android-json")
 }}

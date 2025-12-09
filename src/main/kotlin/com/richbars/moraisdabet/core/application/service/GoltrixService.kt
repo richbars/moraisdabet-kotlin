@@ -113,7 +113,7 @@ class GoltrixService(
                 alertEntryMinute = currentMinute ?: 0,
                 gameFinalScore = score,
                 odd = marketInfo?.back!!.marketOdd,
-                urlGame = "https://www.betfair.bet.br/exchange/plus/pt/futebol/${formatSlug(eventInfo.league)}/${formatSlug(eventInfo.home)}-X-${formatSlug(eventInfo.away)}-apostas-${eventInfo.eventId}",
+                urlGame = "https://www.betfair.bet.br/exchange/plus/football/event/$eventId",
                 urlMarket = "https://www.betfair.bet.br/exchange/plus/football/market/${marketInfo.back.marketId}"
             )
 

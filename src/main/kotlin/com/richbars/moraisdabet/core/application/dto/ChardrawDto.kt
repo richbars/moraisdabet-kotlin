@@ -1,7 +1,7 @@
 package com.richbars.moraisdabet.core.application.dto
 
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalTime
 
 data class ChardrawDto(
     val betfairId: Long,
@@ -11,15 +11,15 @@ data class ChardrawDto(
     val homeName: String,
     val awayName: String,
     val date: LocalDate,
-    val hour: LocalDateTime,
+    val hour: LocalTime,
 
     val marketNameHT: String,
     val marketOddHT: String,
     val marketIdHT: String,
 
-    val marketNameFT: String,
-    val marketOddFT: String,
-    val marketIdFT: String,
+    val marketNameFT: String?,
+    val marketOddFT: String?,
+    val marketIdFT: String?,
 
     val gameStatus: String?,
     val statusHT: String?,

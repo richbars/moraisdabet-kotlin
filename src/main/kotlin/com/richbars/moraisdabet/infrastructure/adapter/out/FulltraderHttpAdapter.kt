@@ -3,10 +3,14 @@ package com.richbars.moraisdabet.infrastructure.adapter.out
 import com.richbars.moraisdabet.core.application.port.FulltraderHttpPort
 import com.richbars.moraisdabet.infrastructure.http.HttpClientManager
 import com.richbars.moraisdabet.infrastructure.util.toJson
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.time.LocalDate
 
 @Service
 class FulltraderHttpAdapter(
@@ -22,6 +26,7 @@ class FulltraderHttpAdapter(
 ) : FulltraderHttpPort {
 
     private val log = LoggerFactory.getLogger(FulltraderHttpAdapter::class.java)
+    val client = OkHttpClient()
 
     private val filters = mapOf(
         //        "Com Dados" to 351810,
@@ -103,16 +108,64 @@ class FulltraderHttpAdapter(
         }
     }
 
-    override suspend fun getGamesChardraw() {
-        val accessToken = login()
-        val url = "https://apiprelive.fulltraderapps.com/filters/6916432848a5ca4a174a0cab"
-        val headers = mapOf(
-            "accept" to "application/json, text/plain, */*",
-            "authorization" to "Bearer $accessToken"
-        )
-        val params = mapOf("t" to "t")
+    /** Get games for filter Chardraw */
+    override suspend fun getGamesChardraw(): JSONArray {
 
-        val result = httpClientManager.get(url, headers, params, true).toJson()
-        println(result)
+        val date = LocalDate.now().toString()
+        val acessToken = login()
+        val filter = getFilterCHardraw()
+        val url = "https://apiprelive.fulltraderapps.com/games/list/$date"
+//        val url = "https://apiprelive.fulltraderapps.com/games/list/2025-12-06" //Mockado
+        val headers = mapOf(
+            "Content-Type" to "application/json",
+            "Authorization" to "Bearer $acessToken"
+        )
+
+        return try {
+            val data = httpClientManager.post(url, headers, filter).toJson()
+            val raw = data.optString("raw")
+            JSONArray(raw)
+        } catch (e: Exception) {
+            log.error("Error retrieving games in Chardraw: ${e.message}", e)
+            throw e
+        }
+
+    }
+
+    /** Get Filter - Chardraw*/
+    private suspend fun getFilterCHardraw(): String {
+        val accessToken = login()
+
+        val request = Request.Builder()
+            .url("https://apiprelive.fulltraderapps.com/filters/6916432848a5ca4a174a0cab")
+            .get()
+            .addHeader("Accept", "application/json, text/plain, */*")
+            .addHeader("Authorization", "Bearer $accessToken")
+            .build()
+
+        return try {
+            val response = client.newCall(request).execute()
+            val json = response.toJson()
+
+            val dataArray = json.getJSONArray("data")
+            val result = JSONArray()
+
+            result.put(5)
+
+            for (i in 0 until dataArray.length()) {
+                if (i == 3) {
+                    result.put(dataArray.get(i))
+                    result.put(JSONArray())
+                } else {
+                    result.put(dataArray.get(i))
+                }
+            }
+
+            result.toString()
+        } catch (e: Exception) {
+            log.error("Error retrieving filter in Chardraw: ${e.message}", e)
+            throw e
+        }
+
     }
 }

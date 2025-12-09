@@ -3,7 +3,7 @@ package com.richbars.moraisdabet.infrastructure.repository.entity
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalTime
 
 @Table("chardraw")
 data class ChardrawEntity(
@@ -29,7 +29,7 @@ data class ChardrawEntity(
     val date: LocalDate,
 
     @Column("hour")
-    val hour: LocalDateTime,
+    val hour: LocalTime,
 
     @Column("market_name_ht")
     val marketNameHT: String,
@@ -41,13 +41,13 @@ data class ChardrawEntity(
     val marketIdHT: String,
 
     @Column("market_name_ft")
-    val marketNameFT: String,
+    val marketNameFT: String?,
 
     @Column("market_odd_ft")
-    val marketOddFT: String,
+    val marketOddFT: String?,
 
     @Column("market_id_ft")
-    val marketIdFT: String,
+    val marketIdFT: String?,
 
     @Column("game_status")
     val gameStatus: String?,

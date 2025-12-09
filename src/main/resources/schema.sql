@@ -29,15 +29,15 @@ CREATE TABLE IF NOT EXISTS chardraw (
     home_name VARCHAR(255) NOT NULL,
     away_name VARCHAR(255) NOT NULL,
     date DATE NOT NULL,
-    hour TIMESTAMP NOT NULL,
+    hour TIME NOT NULL,
 
     market_name_ht VARCHAR(255) NOT NULL,
     market_odd_ht VARCHAR(50) NOT NULL,
     market_id_ht VARCHAR(100) NOT NULL,
 
-    market_name_ft VARCHAR(255) NOT NULL,
-    market_odd_ft VARCHAR(50) NOT NULL,
-    market_id_ft VARCHAR(100) NOT NULL,
+    market_name_ft VARCHAR(255),
+    market_odd_ft VARCHAR(50),
+    market_id_ft VARCHAR(100),
 
     game_status VARCHAR(50),
     status_ht VARCHAR(50),
