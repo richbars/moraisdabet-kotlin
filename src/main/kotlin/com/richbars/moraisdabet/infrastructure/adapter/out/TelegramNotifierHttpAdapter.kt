@@ -143,6 +143,7 @@ class TelegramNotifierHttpAdapter : TelegramNotifierPort {
                         🏆 *${escape(game.leagueName)}*
                         ⚔️ *[${escape(game.homeName)} vs ${escape(game.awayName)}]($eventUrl)*
                         💰 *Odd:* ${escape(game.marketOddHT)}
+                        ⏳ *Hora:* ${escape(game.hour.toString())}
                         🔗 *[Abrir Mercado]($marketUrl)*
                         
                         """.trimIndent() + "\n"

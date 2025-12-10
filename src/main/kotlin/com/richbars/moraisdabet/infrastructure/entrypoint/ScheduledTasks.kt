@@ -16,7 +16,7 @@ class ScheduledTasks(
 
     private val executeMutex = Mutex()
 
-    @Scheduled(cron = "0 34 0 * * *", zone = "America/Sao_Paulo")
+    @Scheduled(cron = "0 10 0 * * *", zone = "America/Sao_Paulo")
     fun runChardrawDaily() {
         runBlocking {
             executeMutex.withLock {
@@ -29,6 +29,7 @@ class ScheduledTasks(
     fun runExecuteEvery1m() {
         runBlocking {
             executeMutex.withLock {
+                chardrawService.update()
                 goltrixService.execute()
                 goltrixService.update()
             }

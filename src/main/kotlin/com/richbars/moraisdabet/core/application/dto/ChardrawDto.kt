@@ -24,5 +24,4 @@ data class ChardrawDto(
     val gameStatus: String?,
     val statusHT: String?,
     val statusFT: String?,
-    val gameScore: String?
 )

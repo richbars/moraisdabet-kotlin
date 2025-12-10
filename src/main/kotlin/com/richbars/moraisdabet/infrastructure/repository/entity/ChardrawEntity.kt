@@ -57,7 +57,4 @@ data class ChardrawEntity(
 
     @Column("status_ft")
     val statusFT: String?,
-
-    @Column("game_score")
-    val gameScore: String?
 )

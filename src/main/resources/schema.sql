@@ -42,7 +42,6 @@ CREATE TABLE IF NOT EXISTS chardraw (
     game_status VARCHAR(50),
     status_ht VARCHAR(50),
     status_ft VARCHAR(50),
-    game_score VARCHAR(20),
 
     PRIMARY KEY (betfair_id)
 );

@@ -23,8 +23,7 @@ object ChardrawMapper {
             marketIdFT = entity.marketIdFT,
             gameStatus = entity.gameStatus,
             statusHT = entity.statusHT,
-            statusFT = entity.statusFT,
-            gameScore = entity.gameScore
+            statusFT = entity.statusFT
         )
 
     fun toEntity(model: ChardrawDto): ChardrawEntity =
@@ -45,7 +44,6 @@ object ChardrawMapper {
             marketIdFT = model.marketIdFT,
             gameStatus = model.gameStatus,
             statusHT = model.statusHT,
-            statusFT = model.statusFT,
-            gameScore = model.gameScore
+            statusFT = model.statusFT
         )
 }

@@ -7,11 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 
-@SpringBootTest(
-    properties = [
-        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration"
-    ]
-)
+@SpringBootTest
 class ChardrawTest {
 
     @MockkBean
@@ -23,5 +19,10 @@ class ChardrawTest {
     @Test
     fun `should saveGamesChardraw execute successfully`() = runTest {
         chardrawService.saveGames()
+    }
+
+    @Test
+    fun `should updateChardraw execute successfully`() = runTest {
+        chardrawService.update()
     }
 }
