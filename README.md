@@ -17,8 +17,7 @@ R2DBC.
 ## Tecnologias
 
 -   Kotlin
--   Spring Boot
--   Spring Data (JPA/R2DBC)
+-   Spring Boot / Data (JPA/R2DBC)
 -   Coroutines
 -   Gradle
 - Betfair / Fulltrader / Sofascore

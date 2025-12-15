@@ -1,14 +1,11 @@
 package com.richbars.moraisdabet.infrastructure.repository.entity
 
-import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
-import java.math.BigInteger
 import java.time.LocalDate
-import kotlin.random.Random
 
 @Table("goltrix")
-data class JpaGoltrixEntity(
+data class GoltrixEntity(
 
     @Column("betfair_id")
     val betfairId: Long,
@@ -31,23 +28,14 @@ data class JpaGoltrixEntity(
     @Column("date")
     val date: LocalDate,
 
-    @Column("alert_market_under_name")
-    val alertMarketUnderName: String? = null,
+    @Column("market_name")
+    val marketName: String,
 
-    @Column("alert_odd_under")
-    val alertOddUnder: String? = null,
+    @Column("market_odd")
+    val marketOdd: String,
 
-    @Column("alert_market_ht_name")
-    val alertMarketHtName: String? = null,
-
-    @Column("alert_odd_ht")
-    val alertOddHt: String? = null,
-
-    @Column("market_under_id")
-    val marketUnderId: String? = null,
-
-    @Column("market_ht_id")
-    val marketHtId: String? = null,
+    @Column("market_id")
+    val marketId: String,
 
     @Column("alert_name")
     val alertName: String,

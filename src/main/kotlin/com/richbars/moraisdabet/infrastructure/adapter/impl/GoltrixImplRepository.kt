@@ -1,25 +1,26 @@
-package com.richbars.moraisdabet.infrastructure.adapter.repository
+package com.richbars.moraisdabet.infrastructure.adapter.impl
 
 
 import com.richbars.moraisdabet.core.application.dto.GoltrixDto
 import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
 import com.richbars.moraisdabet.core.application.port.GoltrixPort
+import com.richbars.moraisdabet.infrastructure.adapter.mapper.toEntity
+import com.richbars.moraisdabet.infrastructure.adapter.mapper.toModel
+import com.richbars.moraisdabet.infrastructure.adapter.repository.GoltrixRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Repository
-import toEntity
-import toModel
 
 @Repository
-class GoltrixRepositoryImpl(
-    private val jpaGoltrixRepository: JpaGoltrixRepository
+class GoltrixImplRepository(
+    private val goltrixRepository: GoltrixRepository
 ) : GoltrixPort {
 
-    private val log = LoggerFactory.getLogger(GoltrixRepositoryImpl::class.java)
+    private val log = LoggerFactory.getLogger(GoltrixImplRepository::class.java)
 
     override suspend fun save(goltrix: GoltrixDto): Boolean {
         return try {
             val entity = goltrix.toEntity()
-            jpaGoltrixRepository.save(entity)
+            goltrixRepository.save(entity)
             true
         } catch (e: Exception){
             log.warn("Conflito ao salvar jogo ${goltrix.eventName} - ${goltrix.alertName}: já existe (betfair_id + alert_name)", e)
@@ -30,7 +31,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun findByBetfairIdAndAlertName(betfairId: Long, alertName: String): GoltrixDto? {
         return try {
-            val entity = jpaGoltrixRepository.findByBetfairIdAndAlertName(betfairId, alertName)
+            val entity = goltrixRepository.findByBetfairIdAndAlertName(betfairId, alertName)
             entity?.toModel()
         } catch (ex: Exception) {
             log.error("Erro ao buscar por betfairId: $betfairId e alertName: $alertName", ex)
@@ -40,7 +41,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun getMatchsInProgress(): List<GoltrixDto> {
         return try {
-            val entities = jpaGoltrixRepository.getMatchsInProgress()
+            val entities = goltrixRepository.getMatchsInProgress()
             entities.map { it.toModel() }
         } catch (ex: Exception) {
             log.error("Erro ao buscar jogos em andamento", ex)
@@ -50,7 +51,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun deleteByBetfairId(betfairId: Long, alertName: String) {
         return try {
-            jpaGoltrixRepository.deleteByBetfairId(betfairId, alertName)
+            goltrixRepository.deleteByBetfairId(betfairId, alertName)
             log.info("Deletando jogo com betfairId: $betfairId da database!")
         } catch (ex: Exception) {
             log.error("Erro ao deletar jogo com betfairId: $betfairId", ex)
@@ -59,7 +60,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun findAll(): List<GoltrixDto> {
         return try {
-            jpaGoltrixRepository.getAll().map { it.toModel() }
+            goltrixRepository.getAll().map { it.toModel() }
         } catch (ex: Exception){
             log.error("Erro ao buscar todos os jogos", ex)
             emptyList()
@@ -68,7 +69,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun updateGoltrix(goltrix: GoltrixUpdate): Boolean {
         return try {
-            val rowsUpdated = jpaGoltrixRepository.updateGoltrix(
+            val rowsUpdated = goltrixRepository.updateGoltrix(
                 betfairId = goltrix.betfairId,
                 alertName = goltrix.alertName,
                 alertExitMinute = goltrix.alertExitMinute,
@@ -100,7 +101,7 @@ class GoltrixRepositoryImpl(
 
     override suspend fun verifyExit(): List<GoltrixDto> {
         return try {
-            jpaGoltrixRepository.verifyExit()
+            goltrixRepository.verifyExit()
                 .map { it.toModel() }
         } catch (ex: Exception) {
             log.error("Erro ao verificar saída do jogo", ex)

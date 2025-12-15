@@ -12,17 +12,10 @@ data class GoltrixDto(
     val awayName: String,
     val date: LocalDate,
 
-    //Alert Lay
-    val alertMarketUnderName: String?,
-    val alertOddUnder: String?,
-
-    //Alert Back
-    val alertMarketHtName: String?,
-    val alertOddHt: String?,
-
-    //Market Id
-    val marketUnderId: String?,
-    val marketHtId: String?,
+    //Market Back
+    val marketName: String,
+    val marketOdd: String,
+    val marketId: String,
 
     //Alert Entry
     val alertName: String,

@@ -31,7 +31,16 @@ spring:
       sheet-name: Goltrix
     cornerpro:
       sheet-name: Produção
+    chardraw:
+      sheet-name: Chardraw
 
+fulltrader:
+  username: ${EMAIL}
+  password: ${PASSWORD}
+
+packball:
+  email: ${EMAIL_PACKBALL}
+  password: ${PASSWORD_PACKBALL}
 
 logging:
   level:

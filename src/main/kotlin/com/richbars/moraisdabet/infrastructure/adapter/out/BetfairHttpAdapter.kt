@@ -1,14 +1,15 @@
 package com.richbars.moraisdabet.infrastructure.adapter.out
 
+import com.richbars.moraisdabet.core.application.dto.*
 import com.richbars.moraisdabet.core.application.port.BetfairHttpPort
-import com.richbars.moraisdabet.core.application.dto.Back
-import com.richbars.moraisdabet.core.application.dto.EventBetfairDto
-import com.richbars.moraisdabet.core.application.dto.Lay
-import com.richbars.moraisdabet.core.application.dto.MarketBetfairDto
 import com.richbars.moraisdabet.infrastructure.http.HttpClientManager
 import com.richbars.moraisdabet.infrastructure.util.toJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
@@ -18,18 +19,24 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 @Service
-class BetfairHttpAdapter : BetfairHttpPort {
+class BetfairHttpAdapter: BetfairHttpPort {
 
     private val log = LoggerFactory.getLogger(BetfairHttpAdapter::class.java)
     private val httpClientManager = HttpClientManager()
 
     companion object {
-        private const val BASE_URL = "https://ero.betfair.bet.br/www/sports/exchange/readonly/v1"
         private const val BY_MARKET_URL = "https://ero.betfair.bet.br/www/sports/exchange/readonly/v1/bymarket"
         private const val BY_EVENT_URL = "https://ero.betfair.bet.br/www/sports/exchange/readonly/v1/byevent"
         private const val EVENT_DETAILS_URL = "https://ips.betfair.bet.br/inplayservice/v1/eventDetails"
         private val DEFAULT_HEADERS = mapOf("Accept" to "application/json")
         private val TIMEZONE: ZoneId = ZoneId.of("America/Sao_Paulo")
+        private val client = OkHttpClient()
+
+
+        private val statusGameMap = mapOf(
+            "InPlay" to "inplay",
+            "COMPLETE" to "finished"
+        )
 
         // 🔹 Mapeamento dos nomes
         private val marketMap = mapOf(
@@ -39,9 +46,10 @@ class BetfairHttpAdapter : BetfairHttpPort {
             "Over 3.5 FT" to "Over/Under 3.5 Goals",
             "Over 4.5 FT" to "Over/Under 4.5 Goals",
             "Over 0.5 FT - CASA" to "Over/Under 0.5 Goals",
-            "Over 0.5 FT - Visitante" to "Over/Under 0.5 Goals",
+            "Over 0.5 FT - VISITANTE" to "Over/Under 0.5 Goals",
             "Over 0.5 HT" to "First Half Goals 0.5",
-            "Over HT Rodrigo" to "First Half"
+            "Over HT Rodrigo" to "First Half",
+            "Com Dados" to "First Half"
         )
 
     }
@@ -99,7 +107,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
         )
 
         var overUnderMarket: JSONObject? = null
-        var firstHalfMarket: JSONObject? = null
+        val firstHalfMarket: JSONObject?
 
         try {
 
@@ -171,7 +179,6 @@ class BetfairHttpAdapter : BetfairHttpPort {
                 "currencyCode" to "BRL"
             )
 
-            // Nome real do mercado que vamos usar no contains()
             val translatedMarketName = marketMap[alertName]
                 ?: throw Exception("No mapping found for alertName='$alertName'")
 
@@ -191,7 +198,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
 
                 val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
 
-                // Agora pesquisa pelo nome traduzido
+                // Filtra pelo nome traduzido
                 val matchingMarkets = marketList.filter {
                     it.optJSONObject("description")
                         ?.optString("marketName")
@@ -202,7 +209,15 @@ class BetfairHttpAdapter : BetfairHttpPort {
                     throw Exception("No markets found using translated name '$translatedMarketName'")
                 }
 
-                val selectedMarket = matchingMarkets.first()
+                // Ordena pelos menores valores
+                val selectedMarket = matchingMarkets
+                    .sortedBy { market ->
+                        extractLineFromMarketName(
+                            market.optJSONObject("description")?.optString("marketName")
+                        ) ?: Double.MAX_VALUE
+                    }
+                    .first()
+
                 val selectedBack = createBackFromMarketNode(selectedMarket)
 
                 return@withContext MarketBetfairDto(null, selectedBack)
@@ -213,6 +228,17 @@ class BetfairHttpAdapter : BetfairHttpPort {
             }
         }
 
+    // Extrai o número final (ex: 0.5, 1.5)
+    private fun extractLineFromMarketName(name: String?): Double? {
+        if (name == null) return null
+
+        val regex = Regex("""([0-9]+\.[0-9]+)""")
+        val match = regex.find(name) ?: return null
+
+        return match.value.toDouble()
+    }
+
+
 
     override suspend fun getStatusMarketById(marketId: String): String =
         withContext(Dispatchers.IO) {
@@ -220,7 +246,7 @@ class BetfairHttpAdapter : BetfairHttpPort {
             val params = mapOf(
                 "currencyCode" to "BRL",
                 "locale" to "en_US",
-                "marketIds" to marketId.toString(),
+                "marketIds" to marketId,
                 "types" to listOf(
                     "MARKET_STATE",
                     "MARKET_RATES",
@@ -268,7 +294,140 @@ class BetfairHttpAdapter : BetfairHttpPort {
             }
         }
 
+    override suspend fun getMarketByIdChardraw(eventId: Long): MarketBetfairPeriodDto =
+        withContext(Dispatchers.IO) {
 
+            val params = mapOf(
+                "eventIds" to eventId.toString(),
+                "locale" to "en_US",
+                "types" to "MARKET_STATE,EVENT,MARKET_DESCRIPTION",
+                "currencyCode" to "BRL"
+            )
+
+            return@withContext try {
+
+                val result = httpClientManager.get(BY_EVENT_URL, DEFAULT_HEADERS, params, true)
+
+                val eventTypes = result.toJson().optJSONArray("eventTypes")
+                    ?: throw Exception("No markets available for betfairId: $eventId")
+
+                val marketNodes = eventTypes
+                    .optJSONObject(0)
+                    ?.optJSONArray("eventNodes")
+                    ?.optJSONObject(0)
+                    ?.optJSONArray("marketNodes")
+                    ?: throw Exception("Malformed response for event $eventId")
+
+                val marketList = (0 until marketNodes.length()).mapNotNull { marketNodes.optJSONObject(it) }
+
+                val marketHT = marketList.firstOrNull {
+                    it.optJSONObject("description")
+                        ?.optString("marketName")
+                        .orEmpty()
+                        .contains("First Half Goals 0.5", ignoreCase = true)
+                }
+
+                val marketFT = marketList.firstOrNull {
+                    it.optJSONObject("description")
+                        ?.optString("marketName")
+                        .orEmpty()
+                        .contains("Over/Under 0.5 Goals")
+                }
+
+                val halftime = createObjectHalftime(marketHT)
+                val fulltime = createObjectFulltime(marketFT)
+
+                MarketBetfairPeriodDto(halftime, fulltime)
+
+            } catch (e: Exception) {
+                log.error("Error while retrieving Half-Time and Full-Time markets for eventId=$eventId", e)
+                log.debug("Market not found or inactive for eventId=$eventId — match may be finished or currently in-play.")
+                throw e
+            }
+    }
+
+    override suspend fun getEventDetailsById(eventId: Long): EventDetailsDto = withContext(Dispatchers.IO) {
+        val requestDetails = Request.Builder()
+            .url("https://ips.betfair.bet.br/inplayservice/v1/eventDetails?eventIds=$eventId&locale=en_US&productType=EXCHANGE&regionCode=UK")
+            .get()
+            .addHeader("accept", "application/json, text/plain, */*")
+            .build()
+
+        return@withContext try {
+
+            val responseDetails = client.newCall(requestDetails).execute()
+
+            if (!responseDetails.isSuccessful) {
+                throw Exception("Request failed with code Details: ${responseDetails.code}")
+            }
+
+            val bodyDetails = responseDetails.body?.string()
+                ?.takeIf { it.isNotBlank() && it != "[]" }
+                ?: throw RuntimeException("Event details response is empty or not available")
+
+            val json = JSONArray(bodyDetails).optJSONObject(0)
+            val statusGame = statusGameMap[json.optString("inPlayBettingStatus")] ?: "unknow"
+
+            EventDetailsDto(
+                json.optString("eventId").toLong(),
+                json.optString("eventName"),
+                json.optString("competitionName"),
+                json.optString("competitionId").toLong(),
+                json.optString("startTime"),
+                json.optString("homeName"),
+                json.optString("awayName"),
+                statusGame
+            )
+
+        } catch (e: Exception){
+            log.error("Error to fetch event details for betfairId $eventId")
+            throw RuntimeException("Error to fetch event details for betfairId $eventId", e)
+        }
+
+
+
+    }
+
+
+    private suspend fun createObjectHalftime(market: JSONObject?): Halftime? {
+
+        if (market == null) return null
+        val marketNodes = getMarketById(market.optString("marketId"))
+
+        val layPrice = marketNodes
+            .optJSONArray("runners")?.optJSONObject(1)
+            ?.optJSONObject("exchange")
+            ?.optJSONArray("availableToBack")
+            ?.optJSONObject(0)
+            ?.optDouble("price")
+            ?.takeIf { it > 0 }
+
+        return Halftime(
+            market.optJSONObject("description").optString("marketName"),
+            market.optString("marketId"),
+            layPrice.toString()
+        )
+    }
+
+    private suspend fun createObjectFulltime(market: JSONObject?): Fulltime? {
+
+        if (market == null) return null
+        val marketNodes = getMarketById(market.optString("marketId"))
+
+        val layPrice = marketNodes
+            .optJSONArray("runners")?.optJSONObject(1)
+            ?.optJSONObject("exchange")
+            ?.optJSONArray("availableToBack")
+            ?.optJSONObject(0)
+            ?.optDouble("price")
+            ?.takeIf { it > 0 }
+
+        return Fulltime(
+            market.optJSONObject("description").optString("marketName"),
+            market.optString("marketId"),
+            layPrice.toString()
+        )
+    }
 
     // Create Object Lay
     private suspend fun createLayFromMarketNode(marketNode: JSONObject): Lay? {
@@ -366,6 +525,66 @@ class BetfairHttpAdapter : BetfairHttpPort {
         }
     }
 
+    suspend fun searchAllGamesByDate(date: String): JSONObject? =
+        withContext(Dispatchers.IO) {
+
+            log.info("Fetching search list by date: $date")
+
+            try {
+                val mediaType = "application/json".toMediaType()
+
+                val body = """
+                {
+                    "filter": {
+                        "productTypes": ["EXCHANGE"],
+                        "turnInPlayEnabled": true,
+                        "maxResults": 0,
+                        "selectBy": "FIRST_TO_START_AZ",
+                        "marketStartingAfter": "${date}T00:00:00.000Z",
+                        "marketStartingBefore": "${date}T23:59:59.999Z",
+                        "eventTypeIds": [1]
+                    },
+                    "facets": [
+                        {
+                            "type": "EVENT_TYPE",
+                            "skipValues": 0,
+                            "maxValues": 999,
+                            "next": {
+                                "type": "EVENT",
+                                "skipValues": 0,
+                                "maxValues": 50
+                            }
+                        }
+                    ],
+                    "currencyCode": "BRL",
+                    "locale": "pt_BR"
+                }
+            """.trimIndent().toRequestBody(mediaType)
+
+                val request = Request.Builder()
+                    .url("https://scan-inbf.betfair.bet.br/www/sports/navigation/facet/v1/search")
+                    .post(body)
+                    .addHeader("cookie", "__cf_bm=4dOlts5FQeIsiKk4WJIfKvJi35Rb_z5dUkmZh._UnpI-1765448396-1.0.1.1-kZI_qslVc8kPZ6uAmJPJpQpmDdnXQ7X_4OtQMIcbwEjGtA9B4CKtOzsHqsoYCtWg3tfSJoAoCiyo_cbd5.b2G7d7RccTL5iXA5xfq52ug0E")
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("Accept", "application/json")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val bodyString = response.body?.string()
+                        ?: return@withContext null
+
+                    val json = JSONObject(bodyString)
+
+                    return@withContext json
+                        .optJSONObject("attachments")
+                        ?.optJSONObject("events")
+                }
+
+            } catch (e: Exception) {
+                log.error("Error fetching search list by date: $date", e)
+                return@withContext null
+            }
+        }
 
 
 }
