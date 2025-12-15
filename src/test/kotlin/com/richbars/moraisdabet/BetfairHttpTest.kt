@@ -43,5 +43,20 @@ class BetfairHttpTest {
         val t = fulltraderHttpAdapter.getGamesChardraw()
         println(t)
     }
+
+    @Test
+    fun `should get all games to date`() = runTest {
+        val adapter = BetfairHttpAdapter()
+        val t = adapter.searchAllGamesByDate("2025-12-11")
+        println(t)
+    }
+
+    @Test
+    fun `should get eventDetails using betfairId`() = runTest {
+        val adapter = BetfairHttpAdapter()
+        val t = adapter.getEventDetailsById(35049763)
+        println(t)
+    }
+
 }
 

@@ -43,6 +43,8 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
 	implementation("me.paulschwarz:spring-dotenv:4.0.0")
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
 
 	implementation(platform("software.amazon.awssdk:bom:2.25.31"))
 	implementation("software.amazon.awssdk:sqs")

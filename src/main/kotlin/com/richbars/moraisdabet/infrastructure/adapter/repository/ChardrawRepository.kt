@@ -9,19 +9,21 @@ import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.data.repository.query.Param
 
 interface ChardrawRepository : CoroutineCrudRepository<ChardrawEntity, Long> {
-    @Query("SELECT * FROM chardraw WHERE game_status != 'finished'")
+    @Query("SELECT * FROM chardraw WHERE game_status NOT IN ('finished', 'postponed')")
     suspend fun getMatchsInProgress(): List<ChardrawEntity>
 
     @Modifying
     @Query("""
     UPDATE chardraw SET
-        market_name_ft = COALESCE(:#{#u.marketNameFT}, market_name_ft),
-        market_odd_ft = COALESCE(:#{#u.marketOddFT}, market_odd_ft),
-        market_id_ft = COALESCE(:#{#u.marketIdFT}, market_id_ft),
+
+        market_name_ft = COALESCE(market_name_ft, :#{#u.marketNameFT}),
+        market_odd_ft  = COALESCE(market_odd_ft,  :#{#u.marketOddFT}),
+        market_id_ft   = COALESCE(market_id_ft,   :#{#u.marketIdFT}),
+
+        
         game_status = COALESCE(:#{#u.gameStatus}, game_status),
         status_ht = COALESCE(:#{#u.statusHT}, status_ht),
-        status_ft = COALESCE(:#{#u.statusFT}, status_ft),
-        game_score = COALESCE(:#{#u.gameScore}, game_score)
+        status_ft = COALESCE(:#{#u.statusFT}, status_ft)
     WHERE betfair_id = :#{#u.betfairId}
 """)
     suspend fun updateChardraw(@Param("u") u: ChardrawUpdate): Int

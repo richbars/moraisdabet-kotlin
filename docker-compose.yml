@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+
   # === PostgreSQL 17 ===
   postgres:
     image: postgres:17
@@ -15,7 +16,7 @@ services:
     networks:
       - net
 
-# === LocalStack (para SQS) ===
+  # === LocalStack (para SQS) ===
   localstack:
     image: localstack/localstack:latest
     container_name: moraisdabet_sqs
@@ -23,15 +24,28 @@ services:
     env_file:
       - .env
     ports:
-      - "4566:4566"   # endpoint principal dos serviços
+      - "4566:4566"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - net
 
+  # === Redis (cache de status /eventDetails) ===
+  redis:
+    image: redis:7-alpine
+    container_name: moraisdabet_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - net
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   net:

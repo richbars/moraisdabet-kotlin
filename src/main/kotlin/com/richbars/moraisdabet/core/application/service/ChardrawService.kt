@@ -16,7 +16,8 @@ class ChardrawService(
     private val betfairHttpPort: BetfairHttpPort,
     private val sofascoreHttptPort: SofascoreHttptPort,
     private val chardrawRepository: ChardrawRepository,
-    private val telegramNotifierPort: TelegramNotifierPort
+    private val telegramNotifierPort: TelegramNotifierPort,
+    private val sheetsServicePort: SheetsServicePort
 ) : ChardrawServicePort {
 
     private val log = LoggerFactory.getLogger(ChardrawService::class.java)
@@ -41,7 +42,7 @@ class ChardrawService(
                 val betfairId = gameArray.get(8)
                     .toString()
                     .toLongOrNull()
-                    ?: throw IllegalArgumentException("Invalid Betfair ID for index $i")
+                    ?: throw IllegalArgumentException("Invalid Betfair ID for index $i -> $gameArray")
 
                 val event = betfairHttpPort.getEventById(betfairId)
                 val sofascoreId = sofascoreHttptPort.getEventNameById(event.eventName)
@@ -60,9 +61,9 @@ class ChardrawService(
                     marketNameFT = null,
                     marketIdFT = null,
                     marketOddFT = null,
-                    marketNameHT = markets.halftime.marketName,
-                    marketIdHT = markets.halftime.marketId,
-                    marketOddHT = markets.halftime.marketOdd,
+                    marketNameHT = markets.halftime?.marketName,
+                    marketIdHT = markets.halftime?.marketId,
+                    marketOddHT = markets.halftime?.marketOdd,
                     gameStatus = gameStatus,
                     statusFT = null,
                     statusHT = null
@@ -73,7 +74,8 @@ class ChardrawService(
                 val entity = ChardrawMapper.toEntity(result)
 
                 chardrawRepository.save(entity)
-                listGamesChardrawToTelegram.add(result) //Adding to list for Telegram
+                sheetsServicePort.createChardrawRow(result)
+                listGamesChardrawToTelegram.add(result)
 
             } catch (e: Exception) {
                 log.warn("Failed to process Chardraw game at index $i. Skipping. Error: ${e.message}", e)
@@ -92,10 +94,15 @@ class ChardrawService(
             val betfairId = game.betfairId
             val sofascoreId = game.sofascoreId
             val marketIdHT = game.marketIdHT
+            val statusFT = game.statusFT
+
+//            val eventInfo = betfairHttpPort.getEventDetailsById(betfairId)
+//            print(eventInfo)
+//            println()
 
             try {
 
-                val statusMarketHT = betfairHttpPort.getStatusMarketById(marketIdHT)
+                val statusMarketHT = betfairHttpPort.getStatusMarketById(marketIdHT!!)
                 val statusGame = sofascoreHttptPort.getStatusGameById(sofascoreId)
 
                 if (statusMarketHT == "LOSER") {
@@ -106,16 +113,25 @@ class ChardrawService(
 
                         val marketFT = betfairHttpPort.getMarketByIdChardraw(betfairId).fulltime
 
+                        val marketIdFT = marketFT?.marketId ?: game.marketIdFT
+                        val marketOddFT = marketFT?.marketOdd ?: game.marketOddFT
+                        val marketNameFT = marketFT?.marketName ?: game.marketNameFT
+
+                        val statusMarketFT = betfairHttpPort.getStatusMarketById(marketIdFT!!)
+                        game.marketIdFT
+
                         val updated = ChardrawUpdate(
                             betfairId,
-                            marketFT.marketName,
-                            marketFT.marketOdd,
-                            marketFT.marketId,
+                            marketNameFT,
+                            marketOddFT,
+                            marketIdFT,
                             statusGame,
                             statusMarketHT,
-                            null
+                            statusMarketFT
                         )
-                        println(updated)
+
+                        chardrawRepository.updateChardraw(updated)
+                        sheetsServicePort.updateChardrawRow(updated)
 
                     } catch (e: Exception){
                         log.error("Error to fetch info to games in betfairId $betfairId")
@@ -124,7 +140,7 @@ class ChardrawService(
 
                 } else {
 
-                    log.debug("Status HT Market equals $statusMarketHT to game $betfairId, updating infos in database")
+//                    log.debug("Status HT Market equals $statusMarketHT to game $betfairId, updating infos in database")
 
                     val updated = ChardrawUpdate(
                         betfairId,
@@ -137,9 +153,24 @@ class ChardrawService(
                     )
 
                     chardrawRepository.updateChardraw(updated)
-                    println(updated)
+                    sheetsServicePort.updateChardrawRow(updated)
 
                 }
+
+                if (!statusFT.isNullOrBlank()) {
+                    try {
+
+                        val statusMarketFT = betfairHttpPort.getStatusMarketById(game.marketIdFT!!) //Exception?
+                        val updatedx = ChardrawUpdate(betfairId, null, null,
+                            null, null, null, statusMarketFT)
+
+                        chardrawRepository.updateChardraw(updatedx)
+
+                    } catch (e: Exception){
+                        log.error("Error too fetch info to market FT in betfairId $betfairId")
+                    }
+                }
+
 
             } catch (e: Exception) {
                 log.error("Failed to update process game at betfairId: $betfairId", e)

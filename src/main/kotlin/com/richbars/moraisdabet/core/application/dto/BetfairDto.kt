@@ -20,8 +20,8 @@ data class MarketBetfairDto(
 )
 
 data class MarketBetfairPeriodDto(
-    val halftime: Halftime,
-    val fulltime: Fulltime
+    val halftime: Halftime?,
+    val fulltime: Fulltime?
 )
 
 data class Halftime(

@@ -7,6 +7,8 @@ import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.ValueRange
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
+import com.richbars.moraisdabet.core.application.dto.ChardrawDto
+import com.richbars.moraisdabet.core.application.dto.ChardrawUpdate
 import com.richbars.moraisdabet.core.application.dto.GoltrixDto
 import com.richbars.moraisdabet.core.application.dto.GoltrixUpdate
 import com.richbars.moraisdabet.core.application.port.SheetsServicePort
@@ -28,6 +30,9 @@ class SheetsServiceAdapter : SheetsServicePort {
 
     @Value("\${spring.sheets.goltrix.sheet-name}")
     private lateinit var goltrixSheetName: String
+
+    @Value("\${spring.sheets.chardraw.sheet-name}")
+    private lateinit var charcrawSheetName: String
 
     companion object {
         private const val APPLICATION_NAME = "MoraisdaBet Sheets Service"
@@ -155,6 +160,105 @@ class SheetsServiceAdapter : SheetsServicePort {
         } catch (e: Exception) {
             logger.error("Erro ao atualizar linha Goltrix no Google Sheets", e)
             throw RuntimeException("Falha ao atualizar no Google Sheets", e)
+        }
+    }
+
+    override suspend fun createChardrawRow(chardrawDto: ChardrawDto): ChardrawDto {
+        return try {
+
+            val sheets = getSheetsService()
+
+            val row = listOf(
+                chardrawDto.betfairId.toString(),
+                chardrawDto.eventName,
+                chardrawDto.leagueName,
+                chardrawDto.homeName,
+                chardrawDto.awayName,
+                chardrawDto.date.toString(),
+                chardrawDto.hour.toString(),
+                chardrawDto.marketNameHT,
+                chardrawDto.marketOddHT ,
+                chardrawDto.marketNameFT ?: "",
+                chardrawDto.marketOddFT ?: "",
+                chardrawDto.statusHT ?: "",
+                chardrawDto.statusFT ?: "",
+                chardrawDto.gameStatus ?: ""
+            )
+
+            val body = ValueRange().setValues(listOf(row))
+
+            sheets.spreadsheets().values()
+                .append(spreadsheetId, "$charcrawSheetName!A:N", body)
+                .setValueInputOption("RAW")
+                .execute()
+
+            logger.debug(
+                "Chardraw record inserted successfully into Google Sheets. betfairId={}",
+                chardrawDto.betfairId
+            )
+
+            chardrawDto
+
+        } catch (e: Exception) {
+            logger.error("Failed to insert Chardraw record into Google Sheets", e)
+            throw RuntimeException("Failed to insert Chardraw data into Google Sheets", e)
+        }
+    }
+
+
+    override suspend fun updateChardrawRow(chardrawUpdate: ChardrawUpdate) {
+        return try {
+
+            val sheets = getSheetsService()
+
+            val response = sheets.spreadsheets().values()
+                .get(spreadsheetId, "$charcrawSheetName!A:A")
+                .execute()
+
+            val rows = response.getValues()
+
+            val rowIndex = rows.indexOfFirst { row ->
+                row.isNotEmpty() && row[0].toString() == chardrawUpdate.betfairId.toString()
+            }
+
+            if (rowIndex == -1) {
+                throw IllegalStateException(
+                    "BetfairId ${chardrawUpdate.betfairId} não encontrado no Sheets"
+                )
+            }
+
+            val sheetRow = rowIndex + 1
+
+            val updatedValues = listOf(
+                listOf(
+                    chardrawUpdate.marketNameFT ?: "",
+                    chardrawUpdate.marketOddFT ?: "",
+                    chardrawUpdate.marketIdFT ?: "",
+                    chardrawUpdate.statusFT ?: "",
+                    chardrawUpdate.gameStatus ?: ""
+                )
+            )
+
+            val body = ValueRange().setValues(updatedValues)
+
+            sheets.spreadsheets().values()
+                .update(
+                    spreadsheetId,
+                    "$charcrawSheetName!J$sheetRow:N$sheetRow",
+                    body
+                )
+                .setValueInputOption("RAW")
+                .execute()
+
+            logger.debug(
+                "Chardraw row updated successfully. betfairId={}, row={}",
+                chardrawUpdate.betfairId,
+                sheetRow
+            )
+
+        } catch (e: Exception) {
+            logger.error("Failed to update Chardraw record in Google Sheets")
+            throw RuntimeException("Failed to update Chardraw data in Google Sheets", e)
         }
     }
 

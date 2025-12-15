@@ -32,13 +32,13 @@ data class ChardrawEntity(
     val hour: LocalTime,
 
     @Column("market_name_ht")
-    val marketNameHT: String,
+    val marketNameHT: String?,
 
     @Column("market_odd_ht")
-    val marketOddHT: String,
+    val marketOddHT: String?,
 
     @Column("market_id_ht")
-    val marketIdHT: String,
+    val marketIdHT: String?,
 
     @Column("market_name_ft")
     val marketNameFT: String?,

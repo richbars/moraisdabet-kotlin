@@ -13,9 +13,9 @@ data class ChardrawDto(
     val date: LocalDate,
     val hour: LocalTime,
 
-    val marketNameHT: String,
-    val marketOddHT: String,
-    val marketIdHT: String,
+    val marketNameHT: String?,
+    val marketOddHT: String?,
+    val marketIdHT: String?,
 
     val marketNameFT: String?,
     val marketOddFT: String?,

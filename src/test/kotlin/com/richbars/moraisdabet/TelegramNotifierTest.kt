@@ -49,8 +49,7 @@ class TelegramNotifierTest {
                 marketOddHT = "2.45",
                 gameStatus = "32'",
                 statusFT = null,
-                statusHT = null,
-                gameScore = "1-0"
+                statusHT = null
             ),
             ChardrawDto(
                 betfairId = 1111111112L,
@@ -69,8 +68,7 @@ class TelegramNotifierTest {
                 marketOddHT = "1.90",
                 gameStatus = "HT",
                 statusFT = null,
-                statusHT = null,
-                gameScore = "0-0"
+                statusHT = null
             ),
             ChardrawDto(
                 betfairId = 1111111113L,
@@ -89,8 +87,7 @@ class TelegramNotifierTest {
                 marketOddHT = "1.60",
                 gameStatus = "12'",
                 statusFT = null,
-                statusHT = null,
-                gameScore = "0-0"
+                statusHT = null
             ),
             ChardrawDto(
                 betfairId = 1111111114L,
@@ -109,8 +106,7 @@ class TelegramNotifierTest {
                 marketOddHT = "2.10",
                 gameStatus = "55'",
                 statusFT = null,
-                statusHT = null,
-                gameScore = "1-1"
+                statusHT = null
             ),
             ChardrawDto(
                 betfairId = 1111111115L,
@@ -129,8 +125,7 @@ class TelegramNotifierTest {
                 marketOddHT = "3.30",
                 gameStatus = "23'",
                 statusFT = null,
-                statusHT = null,
-                gameScore = "1-1"
+                statusHT = null
             )
         )
 
