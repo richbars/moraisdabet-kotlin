@@ -233,7 +233,7 @@ class SheetsServiceAdapter : SheetsServicePort {
                 listOf(
                     chardrawUpdate.marketNameFT ?: "",
                     chardrawUpdate.marketOddFT ?: "",
-                    chardrawUpdate.marketIdFT ?: "",
+                    chardrawUpdate.statusHT ?: "",
                     chardrawUpdate.statusFT ?: "",
                     chardrawUpdate.gameStatus ?: ""
                 )
@@ -250,11 +250,7 @@ class SheetsServiceAdapter : SheetsServicePort {
                 .setValueInputOption("RAW")
                 .execute()
 
-            logger.debug(
-                "Chardraw row updated successfully. betfairId={}, row={}",
-                chardrawUpdate.betfairId,
-                sheetRow
-            )
+            Unit
 
         } catch (e: Exception) {
             logger.error("Failed to update Chardraw record in Google Sheets")

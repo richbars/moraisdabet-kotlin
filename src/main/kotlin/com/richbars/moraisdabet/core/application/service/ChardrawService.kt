@@ -107,7 +107,7 @@ class ChardrawService(
 
                 if (statusMarketHT == "LOSER") {
 
-                    log.debug("HT market marked as LOST. Fetching FT market information for betfairId $betfairId")
+                    //log.debug("HT market marked as LOST. Fetching FT market information for betfairId $betfairId")
 
                     try {
 
