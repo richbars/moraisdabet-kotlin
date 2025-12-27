@@ -42,6 +42,9 @@ packball:
   email: ${EMAIL_PACKBALL}
   password: ${PASSWORD_PACKBALL}
 
+cornerpro:
+  token: ${TOKEN_CORNERPRO}
+
 logging:
   level:
     com.richbars.moraisdabet: TRACE
